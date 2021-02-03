@@ -1,0 +1,281 @@
+library(sf)
+library(leaflet)
+library(tidyverse)
+library(magrittr)
+library(janitor)
+
+geo <- rio::import("geo_mapas/geo2019.xlsx") %>% 
+  filter(NombreMunicipio == "El Alto")
+
+eleccion <- rio::import("/Users/rafalopezv/Documents/data/computo_compilacion/acta.2019.10.25.21.09.30.xlsx") %>% 
+  clean_names() %>% 
+  filter(municipio == "El Alto")
+
+
+(eleccion$recinto %>% unique)[!(eleccion$recinto %>% unique) %in% (geo$NombreRecinto %>% unique)] %>% View ("no_hay")
+
+eleccion$recinto %>% unique %>% view("eleccion")
+geo$NombreRecinto %>% unique %>% View("geo")
+geo %>% View("Geo_base")
+
+
+geo[geo$Reci == "1403" & geo$NombreRecinto == "Colegio Puerto Del Rosario", "NombreRecinto"] <- "Colegio Puerto Del Rosario - Recinto 1403"
+geo[geo$Reci == "2603" & geo$NombreRecinto == "Unidad Educativa Republica de Cuba", "NombreRecinto"] <- "Unidad Educativa Republica de Cuba - Villa Ingenio - 2603"
+geo[geo$Reci == "1704" & geo$NombreRecinto == "Unidad Educativa Republica de Cuba", "NombreRecinto"] <- "Unidad Educativa Republica de Cuba - Pacajes - 1704"
+geo[geo$Reci == "2202" & geo$NombreRecinto == "Escuela Juan Carlos Flores Bedregal", "NombreRecinto"] <- "Escuela Juan Carlos Flores Bedregal - San José de Yunguyo - 2202"
+geo[geo$Reci == "2203" & geo$NombreRecinto == "Escuela Juan Carlos Flores Bedregal", "NombreRecinto"] <- "Escuela Juan Carlos Flores Bedregal - 23 de Marzo - 2203"
+geo[geo$Reci == "2003" & geo$NombreRecinto == "U. E. Villa Adela Yunguyo", "NombreRecinto"] <- "U. E. Villa Adela Yunguyo - Av. Puerto Acosta 1454 - 2003"
+geo[geo$Reci == "2605" & geo$NombreRecinto == "U. E. Villa Adela Yunguyo", "NombreRecinto"] <- "U. E. Villa Adela Yunguyo - Distrito 20 - 2605"
+
+geo %<>% 
+  select(
+    municipio = NombreMunicipio,
+    recinto = NombreRecinto,
+    latitud,
+    longitud
+  )
+
+eleccion %<>% merge(., geo, all.x = T) 
+
+eleccion %>% 
+  filter(is.na(latitud)) %>% 
+  pull(recinto) %>% unique
+
+eleccion[eleccion$recinto == 'U.E. Villa Victoria "B"', "latitud"] <- "-16.5447796"
+eleccion[eleccion$recinto == 'U.E. Villa Victoria "B"', "longitud"] <- "-68.1829689"
+eleccion[eleccion$recinto == 'U.E. Mariscal de Zepita', "latitud"] <- "-16.4881126"
+eleccion[eleccion$recinto == 'U.E. Mariscal de Zepita', "longitud"] <- "-68.2235396"
+eleccion[eleccion$recinto == 'U.E. Ernesto Che Guevara', "latitud"] <- "-16.4759653"
+eleccion[eleccion$recinto == 'U.E. Mariscal de Zepita', "longitud"] <- "-68.2785984"
+eleccion[eleccion$recinto == 'U.E. Heroes de Octubre', "latitud"] <- "-16.4620688"
+eleccion[eleccion$recinto == 'U.E. Heroes de Octubre', "longitud"] <- "-68.2477516"
+eleccion[eleccion$recinto == 'U.E. Villa el Carmen', "latitud"] <- "-16.5326125"
+eleccion[eleccion$recinto == 'U.E. Villa el Carmen', "longitud"] <- "-68.1831151"
+eleccion[eleccion$recinto == 'U.E. Juan Pablo II', "latitud"] <- "-16.5320021"
+eleccion[eleccion$recinto == 'U.E. Juan Pablo II', "longitud"] <- "-68.23427"
+
+eleccion %<>% 
+  mutate(
+    latitud = as.numeric(latitud),
+    longitud = as.numeric(longitud),
+    latitud = round(latitud, 7),
+    longitud = round(longitud, 7),
+    validos = cc + fpv + mts + ucs + mas_ipsp + x21f + pdc + mnr + pan_bol
+  )
+
+
+eleccion %<>% 
+  group_by(recinto, latitud, longitud) %>% 
+  summarise_if(is.numeric, sum) 
+
+
+for(i in 8:16) {
+  eleccion[, i] <- eleccion[, i] / eleccion$validos  * 100
+}
+rm(i)
+
+eleccion %>% 
+  select(1:3, 8:16) %>% 
+  gather(sigla, valor, -recinto, -latitud, -longitud) %>% 
+  mutate(
+    partido = case_when(
+      sigla == "mas_ipsp" ~ "mas_ipsp",
+      T ~ "oposicion"
+    )
+  ) %>% 
+  group_by(recinto, partido, latitud, longitud) %>% 
+  summarise(valor_1 = sum(valor)) %>% 
+  ungroup() %>% 
+  group_by(recinto) %>% 
+  mutate(
+    rank = dplyr::min_rank(desc(valor_1)),
+    valor_1 = round(valor_1, 1)
+  ) %>% 
+  filter(rank == 1) %>% 
+  ungroup() %>% count(partido)
+  group_split(partido) -> alto_mapa_1
+  
+
+# mapa
+municipios <- st_read("geo_mapas/municipios.339.geojson") %>% 
+  filter(MUNICIPIO %in% "El Alto")
+
+pf <- "https://api.mapbox.com/styles/v1/rafalopezv/cjygbldn40ar61dp3y1y6279y/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicmFmYWxvcGV6diIsImEiOiJjanA4eTdicDExZG1hM2ttbjVkamI2N2VvIn0.qG3IffY2IxSgrebVG-3WQQ"
+
+leaflet() %>% 
+  addTiles(urlTemplate = pf, attribution = 'rafalopezv.io') %>% 
+  addCircleMarkers(lng = alto_mapa_1[[1]]$longitud, 
+             lat = alto_mapa_1[[1]]$latitud, 
+             stroke = F, 
+             color = "#7070ff", 
+             label = paste0(alto_mapa_1[[1]]$recinto, ": ", alto_mapa_1[[1]]$valor_1, "% ", "(", alto_mapa_1[[1]]$partido, ")"),
+             group = "MAS-IPSP",
+             radius = alto_mapa_1[[1]]$valor_1 * 0.09,
+             fillOpacity = 0.5
+             
+  ) %>% 
+  addCircleMarkers(lng = alto_mapa_1[[2]]$longitud, 
+             lat = alto_mapa_1[[2]]$latitud, 
+             stroke = F, 
+             color = "#ffff70", 
+             label = paste0(alto_mapa_1[[2]]$recinto, ": ", alto_mapa_1[[2]]$valor_1, "% ", "(", alto_mapa_1[[2]]$partido, ")"),
+             group = "Oposición",
+             radius = alto_mapa_1[[2]]$valor_1 * 0.09,
+             fillOpacity = 0.5
+  ) %>% 
+  addLayersControl(
+    overlayGroups = c("MAS-IPSP", "Oposición"),
+    options = layersControlOptions(collapsed = T)
+  ) %>% 
+  htmlwidgets::saveWidget(here::here("el_alto", "el_alto_binario.html")) 
+  
+# mapa 2
+eleccion %>% 
+  select(1:3, 8:16) %>% 
+  gather(sigla, valor, -recinto, -latitud, -longitud) %>% 
+  ungroup() %>% 
+  mutate(valor = round(valor, 1)) %>% 
+  group_split(sigla) -> mapa_2
+
+leaflet() %>% 
+  addTiles(urlTemplate = pf, attribution = 'rafalopezv.io') %>% 
+  addCircleMarkers(lng = mapa_2[[1]]$longitud, 
+                   lat = mapa_2[[1]]$latitud, 
+                   stroke = F, 
+                   color = "orange", 
+                   label = paste0(mapa_2[[1]]$recinto, ": ", mapa_2[[1]]$valor, "%"),
+                   group = "CC",
+                   radius = mapa_2[[1]]$valor * 0.09,
+                   fillOpacity = 0.5
+                   
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[2]]$longitud, 
+                   lat = mapa_2[[2]]$latitud, 
+                   stroke = F, 
+                   color = "lightgreen", 
+                   label = paste0(mapa_2[[2]]$recinto, ": ", mapa_2[[2]]$valor, "%"),
+                   group = "FPV",
+                   radius = mapa_2[[2]]$valor * 0.09,
+                   fillOpacity = 0.5
+                   
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[3]]$longitud, 
+                   lat = mapa_2[[3]]$latitud, 
+                   stroke = F, 
+                   color = "#7070ff", 
+                   label = paste0(mapa_2[[3]]$recinto, ": ", mapa_2[[3]]$valor, "%"),
+                   group = "MAS-IPSP",
+                   radius = mapa_2[[3]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[4]]$longitud, 
+                   lat = mapa_2[[4]]$latitud, 
+                   stroke = F, 
+                   color = "pink", 
+                   label = paste0(mapa_2[[4]]$recinto, ": ", mapa_2[[4]]$valor, "%"),
+                   group = "MNR",
+                   radius = mapa_2[[4]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[5]]$longitud, 
+                   lat = mapa_2[[5]]$latitud, 
+                   stroke = F, 
+                   color = "green", 
+                   label = paste0(mapa_2[[5]]$recinto, ": ", mapa_2[[5]]$valor, "%"),
+                   group = "MTS",
+                   radius = mapa_2[[5]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[6]]$longitud, 
+                   lat = mapa_2[[6]]$latitud, 
+                   stroke = F, 
+                   color = "red", 
+                   label = paste0(mapa_2[[6]]$recinto, ": ", mapa_2[[6]]$valor, "%"),
+                   group = "PAN-BOL",
+                   radius = mapa_2[[6]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[7]]$longitud, 
+                   lat = mapa_2[[7]]$latitud, 
+                   stroke = F, 
+                   color = "white", 
+                   label = paste0(mapa_2[[7]]$recinto, ": ", mapa_2[[7]]$valor, "%"),
+                   group = "PDC",
+                   radius = mapa_2[[7]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[8]]$longitud, 
+                   lat = mapa_2[[8]]$latitud, 
+                   stroke = F, 
+                   color = "lightblue", 
+                   label = paste0(mapa_2[[8]]$recinto, ": ", mapa_2[[8]]$valor, "%"),
+                   group = "UCS",
+                   radius = mapa_2[[8]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addCircleMarkers(lng = mapa_2[[9]]$longitud, 
+                   lat = mapa_2[[9]]$latitud, 
+                   stroke = F, 
+                   color = "red", 
+                   label = paste0(mapa_2[[9]]$recinto, ": ", mapa_2[[9]]$valor, "%"),
+                   group = "BDN",
+                   radius = mapa_2[[9]]$valor * 0.09,
+                   fillOpacity = 0.5
+  ) %>% 
+  addLayersControl(
+    overlayGroups = c("CC", "FPV",  "MAS-IPSP", "MNR", "MTS", "PAN-BOL", "PDC", "UCS", "BDN"),
+    options = layersControlOptions(collapsed = T)
+  ) %>% 
+  hideGroup(c("CC", "FPV", "MNR", "MTS", "PAN-BOL", "PDC", "UCS", "BDN")) %>% 
+  htmlwidgets::saveWidget(here::here("el_alto", "el_alto_partido.html")) 
+
+
+# evolución de el alto
+df <- read_csv("bases_procesadas/agregado_municipal_porcentaje_vertical_validos/agregado_municipal_porcentaje_vertical_validos.csv")
+options(scipen = 999)
+
+df %<>% 
+  filter(voto %in%  c("eleccion_presidente", "modificacion_168_nacional")) %>% 
+  filter(año  > 1997, municipio == "EL ALTO", sigla == "mas_ipsp") %>% 
+  select(año, valor) 
+
+
+rio::import("/Users/rafalopezv/Documents/data/computo_compilacion/acta.2019.10.25.21.09.30.xlsx") %>% 
+  clean_names() %>% 
+  filter(municipio == "El Alto") %>% 
+  mutate(validos = cc + fpv + mts + ucs + mas_ipsp + x21f + pdc + mnr + pan_bol) %>% 
+  group_by(municipio) %>% 
+  summarise(
+    valor = sum(mas_ipsp),
+    validos = sum(validos),
+    valor = valor/validos * 100
+  ) %>% 
+  select(valor) %>% 
+  mutate(año = 2019) %>% 
+  bind_rows(., df) %>% 
+  arrange(año) -> df
+
+df %>% 
+  mutate_if(is.numeric, round, 0) %>% 
+  ggplot(aes(as.factor(año), valor)) +
+  geom_col(alpha = 0.7, fill = "blue") +
+  labs(
+    title = "Evolución de la votación al MAS-IPSP y Evo Morales",
+    subtitle = "Eleecciones nacionales y referendo del 21F",
+    y = "% de votos a favor del MAS-IPSP y Evo Morales",
+    x = "año del proceso electoral",
+    caption = "rafalopezv.io"
+  ) + 
+  geom_text(aes(label = paste0(valor, "%")), vjust = 0) +
+  hrbrthemes::theme_ipsum_rc() +
+  ggsave(here::here("el_alto", "voto_mas_tiempo.jpg"))
+
+
+  
+  
+
+
+
+
+
+  

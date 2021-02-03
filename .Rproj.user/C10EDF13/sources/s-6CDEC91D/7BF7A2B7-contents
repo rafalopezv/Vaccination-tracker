@@ -1,0 +1,104 @@
+---
+title: '2020 RStudio Table Contest Submission'
+author: "Rafa López V"
+output: 
+  html_document: 
+    css: style.css
+---
+
+```{r setup, warnings = FALSE, message = FALSE, include = FALSE}
+knitr::opts_chunk$set(warnings = FALSE, message = FALSE, echo = FALSE)
+
+
+library(tidyverse)
+library(reactable)
+library(sparkline)
+library(htmltools)
+library(htmlwidgets)
+
+source("limpieza.R")
+
+temp %>% 
+  select(-iso_code, -location, people_vaccinated_per_hundred, confirmados,
+         fallecidos) -> espanol
+```
+
+```{r echo = FALSE}
+### Horizontal bar chart to display points scored and points against
+bar_chart <-
+  function(label,
+           width = "100%",
+           height = "13px",
+           fill = "#00bfc4",
+           background = NULL) {
+    bar <-
+      div(style = list(
+        background = fill,
+        width = width,
+        height = height
+      ))
+    chart <-
+      div(style = list(
+        flexGrow = 1,
+        marginLeft = "8px",
+        background = background
+      ),
+      bar)
+    div(style = list(display = "flex", alignItems = "center"), label, chart)
+  }
+
+
+reactable(
+    espanol,
+    pagination = FALSE,
+    showSortIcon = FALSE,
+    highlight = TRUE,
+    compact = TRUE,
+    defaultSorted = "people_vaccinated_per_hundred",
+    defaultSortOrder = "desc",
+    defaultColDef = colDef(headerClass = "header colheader"),
+    columnGroups = list(
+      colGroup(
+        name = "Prueba de grupos",
+        columns = c("nombre_espanol", "people_vaccinated_per_hundred"),
+        headerClass = "groupheader"
+      )
+    ),
+    columns = list(
+      confirmados = colDef(name = "Curva de contagiados por semana",
+                           align = "center",
+                           cell = function(values) {
+        sparkline(values, type = "bar", chartRangeMin = 0, elementId = "confirmados")
+      }),
+      fallecidos = colDef(name = "Curva de fallecidos por semana",
+                          align = "center",
+                          cell = function(values) {
+        sparkline(values, type = "bar", chartRangeMin = 0)
+      }),
+      
+      people_vaccinated_per_hundred = colDef(
+        name = "Personas Vacunadas por cada 100",
+        align = "left",
+        ### Add column border to left side of column
+        #class = "border-left cell number",
+        headerStyle = list(fontWeight = "500"),
+        cell = function(value) {
+          ### Calculate width of bar color to display
+          width <- paste0(value, "%")
+          bar_chart(value,
+                    width = width,
+                    fill = "#ef8a62",
+                    background = "#e1e1e1")
+        }
+      ),
+      
+      date = colDef(name = "Actualización de la información", align = "center", width = 120, cell = function(value) {
+        strftime(value, format = "%d de %B, %Y")
+      })
+      
+    )
+  )
+    
+
+
+```

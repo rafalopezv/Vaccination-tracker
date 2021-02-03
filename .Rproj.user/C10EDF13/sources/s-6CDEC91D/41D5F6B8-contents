@@ -1,0 +1,43 @@
+---
+title: Fiji earthquakes
+output: 
+  html_document: 
+    css: style.css
+---
+
+<p class="example">
+  Integer elementum massa at nulla placerat varius.
+  Suspendisse in libero risus, in interdum massa.
+  Vestibulum ac leo vitae metus faucibus gravida ac in neque.
+  Nullam est eros, suscipit sed dictum quis, accumsan a ligula.
+</p>
+
+
+<p class="justificado">
+This is an entry-level traineeship, intended primarily to help  specific previous work history or technical abilities. However, candidates with the following attributes may benefit from being able to do more work earlier in their tenure, and from progressing faster to more advanced projects.
+
+This is an entry-level traineeship, intended primarily to help aspiring data journalists gain skills and experience. We do not require any specific previous work history or technical abilities. However, candidates with the following attributes may benefit from being able to do more work earlier in their tenure, and from progressing faster to more advanced projects.
+
+This is an entry-level traineeship, intended primarily to help aspiring data journalists gain skills and experience. We do not require any specific previous work history or technical abilities. However, candidates with the following attributes may benefit from being able to do more work earlier in their tenure, and from progressing faster to more advanced projects.</p>
+
+
+
+```{r}
+library(crosstalk)
+library(leaflet)
+library(DT)
+
+# Wrap data frame in SharedData
+sd <- SharedData$new(quakes[sample(nrow(quakes), 100),])
+
+# Create a filter input
+filter_slider("mag", "Magnitude", sd, column=~mag, step=0.1, width=250)
+
+# Use SharedData like a dataframe with Crosstalk-enabled widgets
+bscols(
+  leaflet(sd) %>% addTiles() %>% addMarkers(),
+  datatable(sd, extensions="Scroller", style="bootstrap", class="compact", width="100%",
+    options=list(deferRender=TRUE, scrollY=300, scroller=TRUE))
+)
+
+```

@@ -1,0 +1,52 @@
+limpieza_dos <- function(.data) {
+  .data %>% 
+    select(-people_vaccinated_per_hundred) %>% 
+    filter(!is.na(people_fully_vaccinated_per_hundred)) %>% 
+    arrange(desc(date)) %>% 
+    slice(1:7) %>% 
+    mutate(
+      promedio_dos_vacuna = lag(people_fully_vaccinated_per_hundred),
+      diferencia_dos_vacuna = promedio_dos_vacuna - people_fully_vaccinated_per_hundred,
+      diferencia_dos_vacuna = mean(diferencia_dos_vacuna, na.rm = T),
+      meta_dos_vacuna = 100 - people_fully_vaccinated_per_hundred,
+      tiempo_dos_vacuna = (meta_dos_vacuna/diferencia_dos_vacuna)/7,
+      ritmo_semanal_dos = diferencia_dos_vacuna*7
+    )
+  slice(1) %>% 
+    select(location, iso_code, date, people_fully_vaccinated_per_hundred, tiempo_dos_vacuna, ritmo_semanal_dos) 
+  
+}
+
+metricas %>% 
+  group_split(location) -> temp2  
+
+map(temp2, limpieza_dos) 
+
+
+
+
+metricas %>% 
+  filter(location == "United Arab Emirates") %>% 
+  select(-people_vaccinated_per_hundred) %>% 
+  filter(!is.na(people_fully_vaccinated_per_hundred)) %>% 
+  arrange(desc(date)) %>% 
+  slice(1:7) %>% 
+  mutate(
+    promedio_dos_vacuna = lag(people_fully_vaccinated_per_hundred),
+    diferencia_dos_vacuna = promedio_dos_vacuna - people_fully_vaccinated_per_hundred,
+    diferencia_dos_vacuna = mean(diferencia_dos_vacuna, na.rm = T),
+    meta_dos_vacuna = 100 - people_fully_vaccinated_per_hundred,
+    tiempo_dos_vacuna = (meta_dos_vacuna/diferencia_dos_vacuna)/7,
+    ritmo_semanal_dos = diferencia_dos_vacuna*7
+  ) %>% view
+slice(1) %>% 
+  select(location, iso_code, date, people_fully_vaccinated_per_hundred, tiempo_dos_vacuna, ritmo_semanal_dos) 
+
+
+
+aa <- read_csv("/Users/rafalopezv/Desktop/UNdata_Export_20210128_230508179 4.csv", guess_max = 35000)
+
+
+
+
+

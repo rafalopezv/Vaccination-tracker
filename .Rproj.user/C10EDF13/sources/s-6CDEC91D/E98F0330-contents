@@ -1,0 +1,1766 @@
+---
+title: "<span style='font-size: 50px'><center>Quarterly Report</center></style>"
+subtitle: "<span style='font-size: 45px'><center>LOCFUND II</center></style>"
+output: 
+  html_document:
+    self_contained: true
+    anchor_sections: FALSE
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+    css: style.css
+
+params:
+  year:
+    label: "Year"
+    value: 2020
+    input: slider
+    min: 2013
+    max: 2021
+    step: 1
+    sep: ""
+  month:
+    # label: "Mes"
+    # value: January
+    label: "Quarter"
+    value: "1st"
+    input: select
+    # choices: [January, February, March, April, May, June, July, August, September, October, November, December]
+    choices: ["1st (Jan - Mar)", "2nd (Apr - Jun)", "3rd (Jul - Sep)", "4th (Oct - Dec)"]
+  debt_commit:
+    label: "Debt Commitment - Debt Contributions USD (MM)"
+    value: 50
+    input: numeric
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(tidyverse)
+library(kableExtra)
+library(magrittr)
+library(reactable)
+library(highcharter)
+library(glue)
+library(lubridate)
+library(downloadthis)
+
+source("funciones.R")
+df_base <- rio::import("output/base_datos_lf.xlsx") # Cargamos Base de datos general
+desemb <- rio::import("output/desembolsos.xlsx") # cargamos base desembolsos
+country_b <- rio::import("output/lista_mfis.xlsx") 
+
+df_sociales <- rio::import("output/datos_sociales.xlsx")
+
+param_mes <- params$month
+# param_mes <- case_when(param_mes == "January" ~ 1,
+#                  param_mes == "February" ~ 2,
+#                  param_mes == "March" ~ 3,
+#                  param_mes == "April" ~ 4,
+#                  param_mes == "May" ~ 5,
+#                  param_mes == "June" ~ 6,
+#                  param_mes == "July" ~ 7,
+#                  param_mes == "August" ~ 8,
+#                  param_mes == "September" ~ 9,
+#                  param_mes == "October" ~ 10,
+#                  param_mes == "November" ~ 11,
+#                  param_mes == "December"~ 12)
+
+param_mes <- case_when(param_mes == "1st (Jan - Mar)" ~ 3,
+                 param_mes == "2nd (Apr - Jun)" ~ 6,
+                 param_mes == "3rd (Jul - Sep)" ~ 9,
+                 param_mes == "4th (Oct - Dec)" ~ 12)
+
+
+```
+
+<hr>
+
+<center>Report time frame: `r month.name[param_mes]`, `r params$year`</center>
+
+
+<br>
+<small><center>Generated on: `r format(Sys.time(), '%d %B, %Y, %X  %Z')`</center></small>
+<hr> 
+
+
+
+## Clarification
+
+The following document is a dynamic report, which allows the user to interact with different tables and graphs.   
+
+For example, by hovering over the different elements of the graphs additional information becomes visible. The user can also interact with the tables to expand further information.
+
+Take into account that sections with tables and grpahs might have different panes with other information.
+
+Specific sections can be selected from the top left index.
+
+<hr>
+
+# QUARTER IN REVIEW
+
+-   Despite the COVID context and the FX effect, Locfund II maintains positive performance. The strategy of closely monitoring MFIs allowed Locfund II taking early actions to mantain a good portfolio quality. It is expected that the fund will be able to continue with this positive trend until the end of the year.
+
+-   As of September 2020, Locfund II collected payments for USD 22,6 MM from 45 MFIs. During the third quarter, 5 operations were rescheduled, with no significant impact on the fund's cash flow.
+
+-   As of October 2020, fund's liquidity represents 90% of the debt payment due on November 2020. Therefore, it is expected that Locfund will meet the debt installment without any inconvenience.
+
+-   Most of the local currencies from the region continued with a devaluation trend. However, in July the FX result had a recovery of USD 106K that allowed to reduce the FX loss of the quarter (USD 198k).
+
+-   Locfund II was able to revert the accumulated loss in July, thanks to the robust financial income and the cost reduction efforts. As of September 2020 the fund achieves a positive result of 297k amid the crisis context.
+
+```{r, include = T, echo = F}
+mapa <- jsonlite::fromJSON("img/hcmap_latam.geojson", simplifyVector = F)
+
+mfi_countries <- desemb %>% select(entity = cliente, total = monto_usd) %>% 
+  left_join(country_b, by = "entity") %>% 
+  group_by(country) %>% 
+  summarise(loan = n(),
+            total = round(sum(total)/1000000,2)) %>% 
+  mutate(asist = runif(n = nrow(.), min = 1, max = 21) %>% round(., 0)) #technical assistance is a random number now
+
+
+# Adjuntamos cantidad de desembolsos
+temp <- desemb %>% select(entity = cliente) %>% 
+  left_join(country_b, by = "entity") %>% 
+  select(country, entity_hom) %>% distinct() %>% 
+  arrange(country) %>% 
+  group_by(country) %>% 
+  summarise(cantidad = n())
+
+mfi_countries %<>% left_join(temp, by = "country")
+
+# adjuntamos fecha primer desembolso
+temp <- desemb %>% select(entity = cliente, fecha) %>% 
+  left_join(country_b, by = "entity") %>% distinct() %>% 
+  group_by(country) %>% 
+  summarise(primer = min(fecha))
+
+mfi_countries %<>% left_join(temp, by = "country")
+
+# cargamos mapa latinoamerica
+mapa <- jsonlite::fromJSON("img/hcmap_latam.geojson", simplifyVector = F)
+
+# unimos todos lo paises con paises de desembolsos e identificamos que tipo de pais es
+get_data_from_map(mapa) %>% select(country) %>% # todos los paises
+  left_join(mfi_countries, by = "country") %>% # paises de desmbolso
+  mutate(
+    sede = case_when(
+      country %in% c("Bolivia", "Nicaragua") ~ "Locfund/Bim Offices", # identificamos paises Locfund/Bim Offices
+      country %in% c(mfi_countries %>% pull(country)) ~ "Intervention countries", # identificamos paises Intervention countries
+      T ~  "No intervention" # Todos los demás paises No intervention
+    ),
+    primer = lubridate::ymd(primer)
+  ) -> temp
+
+
+
+highchart(type = "map") %>% 
+  hc_plotOptions(map = list(
+    allAreas = F,
+    joinBy = "country",
+    mapData = mapa
+  )) %>% 
+  hc_add_series(name = "Locfund/Bim Offices", 
+                data = temp %>% filter(sede == "Locfund/Bim Offices"), 
+                color = "#E76F51", 
+                borderColor = "white", 
+                borderWidth = 1/20,
+                tooltip = list(pointFormat = paste("<b>{point.country}</b><br>
+                                                   - Loan Disbursement: {point.loan}<br>
+                                                   - Technical Assistance to MFI's: {point.asist}<br>
+                                                   - First Disb.: {point.primer}<br>
+                                                   - Disb. Amount: {point.total} (USD MM)<br>
+                                                   - Total MFI's: {point.cantidad}"))) %>% 
+  hc_add_series(name = "Intervention countries", 
+                data = temp %>% filter(sede == "Intervention countries"), 
+                color = "#264653", 
+                borderColor = "white", 
+                borderWidth = 1/20,
+                tooltip = list(pointFormat = paste("<b>{point.country}</b><br>
+                                                   - Loan Disbursement: {point.loan}<br>
+                                                   - Technical Assistance to MFI's: {point.asist}<br>
+                                                   - First Disb.: {point.primer}<br>
+                                                   - Disb. Amount: {point.total} (USD MM)<br>
+                                                   - Total MFI's: {point.cantidad}"))) %>% 
+  hc_add_series(name = "No intervention", 
+                data = temp %>% filter(sede == "No intervention"), 
+                color = "lightgray", 
+                borderColor = "white", 
+                borderWidth = 1/20,
+                tooltip = list(pointFormat = paste("<b>{point.country}</b><br>"))) %>% 
+  hc_title(text = "Loan Disbursement & Technical Assistance to MFI's",align =  "center") %>% 
+  hc_subtitle(text = "Hover your mouse on each country for more information", align = "center") %>% 
+  # hc_tooltip(borderWidth = 0.01,
+  #            pointFormat=paste("<b>{point.country}</b><br>
+  #                              Loan Disbursement: {point.loan}<br>
+  #                              Technical Assistance to MFI's: {point.asist}<br>
+  #                              Disbursement Amount: {point.total} (USD MM)")) %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_mapNavigation(enabled = TRUE)
+
+```
+
+## ABOUT THE FUND
+
+LOCFUND II L.P. offers local currency denominated debt instruments and targeted credit enhancement financial instruments to microfinance institutions (regulated or non-regulated), microfinance banks, institutional investors, cooperatives and small business banks, which facilitate funding to small and micro enterprises in Latin America and The Caribbean.
+
+The fund also provides support for development activities to selected microfinance institutions and stimulates access to local securities markets for fixed income instruments issued by microfinance institutions.
+
+The fund is managed by BIM Ltd.
+
+## EQUITY INVERSTORS
+
+LOCFUND II L.P. has eight equity inverstors which are: Multilateral Investment Fund, FMO, Norfund, BIO, Hyos Invest Holding AG, SIFEM, Panamerican Investments S.A. and BIM Microfinance II.
+
+## ACCUMULATED DISBURSEMENTS
+
+```{r, include = T, echo = F}
+
+temp <- as.data.frame(desemb %>% 
+                        group_by(gestion, mes) %>% 
+                        summarise(value = max(acumulado_usd)) %>% 
+                        mutate(fecha = ymd(paste(gestion,"/", mes, "/", 1)),
+                               value = value/100000)) %>% 
+  select(fecha, value)
+
+
+row.names(temp) <- temp$fecha
+
+temp %<>% xts::as.xts() 
+
+temp$fecha <- NULL
+temp$value_1 <-  as.numeric(temp$value)
+temp$value <-  NULL
+titulo <- temp$value_1 %>% last %>% round(., 1)
+
+highchart(type = "stock") %>% 
+  hc_add_series(temp, type = "line", name = "Accumulated disbursements") %>% 
+  hc_colors(colors = "#E76F51") %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_tooltip(valueSuffix = " MM", borderWidth = 0.001) %>% 
+  hc_plotOptions(
+    line = list(
+      lineWidth = 5
+    ) 
+  ) %>% 
+  hc_title(text = glue('{titulo} MM Disbursed'))
+
+```
+
+## {.tabset .tabset-fade .tabset-pills}
+
+
+### FUND FACTS
+
+```{r}
+
+ff <- fund_facts(params$year, param_mes, params$debt_commit)
+
+# Creamos tabla 
+ff %>%
+  kbl(caption = "FUND FACTS (USD)") %>%
+  kable_styling("striped") %>%
+  kable_classic(full_width = F, html_font = "Open Sans")
+
+
+
+```
+
+### PORTFOLIO PERFORMANCE INDICATORS
+
+```{r}
+
+ppi <- port_perf_ind(params$year, param_mes)
+
+# Creamos la tabla
+ppi %>%
+  kbl(caption = "FUND FACTS (USD)") %>%
+  kable_styling("striped") %>%
+  kable_classic(full_width = F, html_font = "Open Sans")
+
+
+```
+
+### SOCIAL INDICATORS
+
+```{r}
+
+
+tbl_social <- base_sociales(params$year, param_mes)
+
+
+tbl_social %>%
+  summarise(`Total Number of Clients` = round(sum(number_of_clients),2),
+            # `Female Clients (%)` = round(mean(female_clients_percent)*100,2),
+            `Female Clients (%)` = round((sum(female_clients)/sum(number_of_clients))*100,2),
+            # `Clients in Rural Areas (%)` = round(mean(rural_clients_percent)*100,2),
+            `Clients in Rural Areas (%)` = round((sum(rural_clients)/sum(number_of_clients))*100,2),
+            `Avg. Loan Size` = round(mean(average_loan_usd),2)) %>%
+  gather(Indicators, Values) %>%
+  kbl(caption = "SOCIAL INDICATORS", format.args = list(big.mark = ",")) %>%
+  kable_styling("striped") %>%
+  kable_classic(full_width = F, html_font = "Open Sans")
+
+
+```
+
+## FINANCIAL INDICATORS (USD) {.tabset .tabset-fade .tabset-pills}
+
+### BALANCE SHEET USD
+
+```{r}
+
+df_bs <- balance_sheet_sumary(params$year, param_mes)
+
+# Creamos Tabla Blance Sheet
+reactable(
+  df_bs,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("tipo", "nivel1"),
+  columns = list(
+    tipo = colDef(name = "BALANCE SHEET USD",
+                  minWidth = 75),
+    nivel1 = colDef(name = "Groups",
+                    minWidth = 75),
+    nivel2 = colDef(name = "Sub-Group",
+                    minWidth = 75),
+    total = colDef(name = "USD",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 75)
+  )
+  
+)
+
+
+```
+
+### PROFIT/LOSS SUMMARY
+
+```{r}
+
+# Llamamos funcion para generar data frame Profit/Loss
+df_pl <- profit_loss_summary(params$year, param_mes)
+
+
+# Creamos tabla profit loss  con independientes y acumulados
+reactable(
+  # as.data.frame(df_pl) %>% select(-tipo),
+  df_pl,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("nivel1"),
+  columns = list(
+    # tipo = colDef(name = "PROFIN/ LOSS USD",
+    #               minWidth = 75),
+    nivel1 = colDef(name = "PROFIT/ LOSS USD",
+                    minWidth = 75),
+    nivel2 = colDef(name = "Sub-Group",
+                    minWidth = 75),
+    total = colDef(name = "USD",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 75),
+    acumulado = colDef(name = "Cummulative USD",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 75)
+  )
+  
+)
+
+```
+
+## 
+
+-   The reserve for loan loss reduced thanks to MFIs' debt installments as scheduled. The fund mantains the voluntary provision of 5% over the rescheduled installments.
+
+-   As of September 2020, the currencies that showed recovery from June 2020 are HNL (USD 63k) and MXN (USD 76k) allowing to mitigate Q3's accumulated FX losses. Unfortunately, 2020 FX effect is one of the highest since inception due to COVID and economic crisis in LAC countries.
+
+-   Despite the above described FX negative effect, Locfund II shows positive results in 2020.
+
+## MFI DISTRIBUTION (MM USD)
+
+```{r, echo = F, fig.align='center'}
+
+# llamamos funcion para generar base Country Analisis
+df_imf <- country_analysis(params$year, param_mes)
+
+
+temp <- df_imf %>% 
+  group_by(country,entity_hom) %>% 
+  summarise(operations = n(),
+            total = round(sum(total)/100000,2),
+            principal = round(sum(principal)/100000,2),
+            accrued_interest = round(sum(accrued_interest)/100000,2)) %>%
+  arrange(desc(total))
+
+
+temp %>% 
+  hchart("bar", color = "#073B4C", 
+         hcaes(entity_hom, total)) %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_tooltip(borderWidth = 0, 
+             pointFormat=paste("<b>{point.entity_hom}</b> ({point.country}) <br>
+                               # Operations: {point.operations}<br>
+                               <b>Portfolio:</b> {point.total} MM USD<br>
+                               Principal: {point.principal} MM USD<br>
+                               Interest: {point.accrued_interest} MM USD"),
+             headerFormat = "") %>% 
+  hc_plotOptions(bar = list(
+    dataLabels = list(
+      enabled = T
+    )
+  )
+  ) %>% 
+  hc_size(height = 650) %>% 
+  hc_yAxis(title = list(text = "")) %>% 
+  hc_xAxis(title = list(text = ""))  
+ 
+
+```
+
+## TECHNICAL SUPPORT FACILITY
+
+During Q3, the TSF delivered three activities, where a total of 28 staff members were trained out of them 40% female: a) business, risks, HHRR and finance support in order to provide advising on the analysis and possible scenarios that allow maintaining the best performance of the MFI and mitigating the different risks that will have the greatest impact during the COVID-19 crisis in two MFIs in Honduras. b) A Bolivian MFI has implemented an automated ABC costing tool.
+
+## CAPITAL MARKETS COMPONENT
+
+-   Potential secondary market transactions in El Salvador and Ecuador are expected to resume in 2021.
+
+-   New bond issuances from clients in Colombia, Honduras and Guatemala are being postponed as a consequence of the COVID-19 impact and will be resume during the next year. Locfund II is not able to join tis efforts, but it is expected that Locfund Next will take the lead.
+
+
+## SOCIAL PERFORMANCE {.tabset .tabset-fade .tabset-pills}
+
+### Exposure to Female clients
+
+```{r, echo = F, fig.align='center'}
+
+tbl_social <- base_sociales(params$year, param_mes)
+
+tbl_social %>% 
+  mutate(`Women clients (%)` = case_when(female_clients_percent <= 0.2 ~ "0% - 20%",
+                                  female_clients_percent > 0.2 & female_clients_percent <= 0.4 ~ "20% - 40%",
+                                  female_clients_percent > 0.4  & female_clients_percent <= 0.6 ~ "40% - 60%",
+                                  female_clients_percent > 0.6 & female_clients_percent <= 0.8 ~ "60% - 80%",
+                                  female_clients_percent > 0.8 ~ "80% - 100%")) %>% 
+  group_by(`Women clients (%)`) %>% 
+  summarise(`# of Locfund's MFIs` = n()) %>% 
+  hchart("column", name = "# of Locfund's MFIs", color = "#e63946",
+         hcaes(`Women clients (%)`, `# of Locfund's MFIs`)) %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_tooltip(borderWidth = 0) %>% 
+  hc_plotOptions(column = list(
+    dataLabels = list(
+      enabled = T
+    )
+  )
+  ) %>% 
+  # hc_title(text = "Exposure to Female clients") %>% 
+  hc_size(height = 300)
+
+```
+
+### Exposure to Rural Clients
+
+```{r, echo = F, fig.align='center'}
+
+tbl_social <- base_sociales(params$year, param_mes)
+
+tbl_social %>% 
+  mutate(`Rural clients (%)` = case_when(rural_clients_percent <= 0.2 ~ "0% - 20%",
+                                         rural_clients_percent > 0.2 & rural_clients_percent <= 0.4 ~ "20% - 40%",
+                                         rural_clients_percent > 0.4  & rural_clients_percent <= 0.6 ~ "40% - 60%",
+                                         rural_clients_percent > 0.6 & rural_clients_percent <= 0.8 ~ "60% - 80%",
+                                         rural_clients_percent > 0.8 ~ "80% - 100%")) %>% 
+  group_by(`Rural clients (%)`) %>% 
+  summarise(`# of Locfund's MFIs` = n()) %>% 
+  hchart("column", name = "# of Locfund's MFIs", color = "#264653",
+         hcaes(`Rural clients (%)`, `# of Locfund's MFIs`)) %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_tooltip(borderWidth = 0) %>% 
+  hc_plotOptions(column = list(
+    dataLabels = list(
+      enabled = T
+    )
+  )
+  ) %>% 
+  # hc_title(text = "Exposure to Rural Clients") %>% 
+  hc_size(height = 300)
+
+```
+
+<br>
+
+## COUNTRY EXPOSURE
+
+```{r, echo = F}
+
+# llamamos funcion para generar base Country Analisis
+df_imf <- country_analysis(params$year, param_mes)
+temp <- df_imf %>% group_by(country) %>% 
+  summarise(portfolio = sum(total)) %>% 
+  arrange(desc(portfolio)) %>% 
+  mutate(
+    num = 1:nrow(.),
+    prop = prop.table(portfolio)*100,
+    prop = round(prop, 2),
+    etiqueta = paste0(country, " (", prop, "%)")
+  )
+
+temp$portfolio <- round(temp$portfolio/100000,2)
+
+# adjuntamos cantidad de MFIs y de operaciones
+
+
+
+temp %<>% 
+  left_join(df_imf %>% select(country, entidad) %>% distinct() %>% # adjuntamos Operaciones
+                     group_by(country) %>% 
+                     summarise(operaciones = n()),
+                   by = "country") %>% 
+  left_join(df_imf %>% select(country, entity_hom) %>% distinct() %>% # adjuntamos MFIs
+              group_by(country) %>% 
+              summarise(mfis = n()),
+            by = "country")
+
+
+# colores
+colores <- c( "#152614", "#0a2e36", "#223542", "#166b60", "#1e441e", "#036d19", "#2a7221","#09a129", "#1dad5e", "#4dfe15",
+             "#119822","#31cb00", "#14cc60", "#27fb6b")
+
+hchart(
+  temp, hcaes(x = etiqueta , value = portfolio, color = prop),
+  type = "treemap"
+  ) %>%
+  hc_plotOptions(
+    treemap = list(
+      dataLabels = list(
+        enabled = T,
+        align = "left",
+        verticalAlign = "top",
+        style = list(textOutline = FALSE, color = "white")
+      )
+    )
+  ) %>% 
+  hc_tooltip(borderWidth = 0,
+             enabled = T, valueDecimals = 2, borderWidth = 0.01, 
+             style = list(fontFamily = "Open Sans"), backgroundColor =  "white",
+             pointFormat=paste("<b>{point.etiqueta}</b> <br>
+                               <b>Portfolio:</b> {point.portfolio} MM USD<br>
+                               # MFI's: {point.mfis}<br>
+                               # Operations: {point.operaciones}"),
+             headerFormat = "") %>%
+  hc_colorAxis(stops = color_stops(colors = colores)) %>%
+  hc_chart(style = list(fontFamily = "Open Sans")) %>%
+  hc_subtitle(text = "Hover your mouse on each country for more information", align = "center")
+
+```
+
+## OUR TEAM
+
+```{r}
+
+data.frame(Position = c( "General Manager",
+                                     "Director, Latin America and the Caribbean", 
+                                     "TSF Director", 
+                                     "Capital Markets Officer", 
+                                     "Credit Officer",  
+                                     "Credit Officer",  
+                                     "Leading Consultant - TSF"),
+                       Name = c( "Fernando Sanchez", 
+                                 "Cesar Castillo",  
+                                 "Verónica Céspedes", 
+                                 "Veronica Zamora", 
+                                 "Mauricio Rodriguez", 
+                                 "Rolando Pereira", 
+                                 "Pedro Fardella"),
+                       `e-mail` = c( "fsanchez@locfund.com", 
+                                     "ccastillo@locfund.com", 
+                                     "vcespedes@locfund.com", 
+                                     "vzamora@locfund.com", 
+                                     "mrodriguez@locfund.com", 
+                                     "rpereira@bim-bfm.com", 
+                                     "pfardella@locfund.com")) %>% 
+             kbl(caption = "OUR TEAM") %>%
+             kable_styling("striped") %>%
+             kable_classic(full_width = F, html_font = "Open Sans")
+  
+
+```
+
+# SOCIAL IMPACT
+
+## SOCIAL HIGHLIGHTS
+
+(Social Highlights pertain exclusively to MFIs in fund´s portfolio)
+
+Since the Covid-19 crisis began, a Bolivian MFI is organizing free webinars to train clients in financial literacy topics (e.g. Rights and obligations of the financial consumer, Term Deposits, Saving Deposits, etc.) and other such us Sports and religious vocation.
+
+A Paraguayan MFI -with the support of the US government- began a 3-month female empowerment training program considering the following topics: leadership, business model in a digital framework, legal framework, violence prevention.
+
+A Peruvian MFI, in monthly basis organizes webinars with specific gender perspective, considering the following topics: justice practices in relation to gender violence during the Covid-19 lockdown, defense of female rights against violence against women, etc.
+
+## DEVELOPMENTAL GOALS
+
+(Below Data pertains exclusively to MFIs in fund´s portfolio) 
+
+(Most recent Social Indicators available, as of September 2020)
+
+```{r}
+
+tbl_social <- base_sociales(params$year, param_mes)
+
+data.frame(Clients  = c("Total number of clients", 
+                        "Female clients (%)", 
+                        "Rural Clients (%)", 
+                        "Average loan size (c)", 
+                        "Total clients reached by LOCFUND II financing",
+                        "Avg. loan size/GDP per capita (d)",
+                        "Write-offs (%)"),
+           Current = c(round(sum(tbl_social$number_of_clients),2),
+                       round((sum(tbl_social$female_clients)/sum(tbl_social$number_of_clients))*100,2),
+                       round((sum(tbl_social$rural_clients)/sum(tbl_social$number_of_clients))*100,2),
+                       1355.42,
+                       204198.85,
+                       90,
+                       round(mean(tbl_social$write_offs_percent*100),2)
+                       ),
+           Goal = c("Not Applicable",
+                    ">= 50%",
+                    ">= 35%",
+                    "<= 1,200",
+                    ">= 85,000",
+                    ">= 50%",
+                    "<= 3%"),
+           Deadline = c("Not Applicable",
+                        "Year 6",
+                        "Year 6",
+                        "Year 4",
+                        "Year 8",
+                        "Year 6",
+                        "Year 6"),
+           Status = c("Not Applicable",
+                      ifelse(round((sum(tbl_social$female_clients)/sum(tbl_social$number_of_clients))*100,2)>50, "Compliant", "In process"),
+                      ifelse(round((sum(tbl_social$rural_clients)/sum(tbl_social$number_of_clients))*100,2)>35, "Compliant", "In process"),
+                      ifelse(1355.42 <= 1200,"Compliant", "In process"),
+                      ifelse(204198.85 <= 85000,"Compliant", "In process"),
+                      ifelse(90 >= 50,"Compliant", "In process"),
+                      ifelse(round(mean(tbl_social$write_offs_percent*100),2)<=0.03,"Compliant", "In process"))) %>% 
+  kbl(caption = "", format.args = list(big.mark = ",")) %>%
+  kable_styling("striped") %>%
+  kable_classic(full_width = F, html_font = "Open Sans")
+
+
+```
+
+
+## SOCIAL PERFORMANCE
+
+(Social Performance Data pertains exclusively to MFIs in fund´s portfolio) (Most recent Social Indicators available, as of September 2020)
+
+```{r}
+
+
+
+tbl_social <- base_sociales(params$year, param_mes)
+
+
+reactable(
+  tbl_social,
+  filterable = TRUE, 
+  bordered = TRUE, 
+  striped = TRUE, 
+  highlight = TRUE, 
+  defaultPageSize = 15,
+  resizable = TRUE, 
+  # wrap = FALSE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("country"),
+  columns = list(
+    country = colDef(name = "Country",
+                     minWidth = 150),
+    nombre_mfi = colDef(name = "MFIs",
+                        aggregate = "unique",
+                        footer = "Total",
+                        minWidth = 150),
+    data_as_of = colDef(name = "Data as of",
+                        format = colFormat(date = TRUE)),
+    # format = list(
+    #   cell = colFormat(date = TRUE),
+    #   aggregated = colFormat(suffix = " dates"))),
+    loan_portfolio_usd_mm = colDef(name = "Loan Portfolio (USD MM)",
+                                   aggregate = "sum",
+                                   format = colFormat(suffix = " MM", separators = TRUE),
+                                   footer = function(values) sprintf("%.2f", sum(values)),
+                                   minWidth = 150),
+    number_of_clients = colDef(name = "Number of Clients",
+                               aggregate = "sum",
+                               footer = function(values) sprintf("%.0f", sum(values)),
+                               format = colFormat(separators = TRUE)),
+    female_clients_percent = colDef(name = "Female clients (%)",
+                                    aggregate = "mean",
+                                    format = colFormat(percent = TRUE, digits = 1)),
+    rural_clients_percent = colDef(name = "Rural clients (%)",
+                                   aggregate = "mean",
+                                   format = colFormat(percent = TRUE, digits = 1)),
+    average_loan_usd = colDef(name = "Average loan (USD)",
+                              aggregate = "mean",
+                              format = colFormat(separators = TRUE, digits = 2)),
+    average_loan_gdp_per_capita = colDef(name = "Average loan/GDP per Capita",
+                                         format = colFormat(percent = TRUE, digits = 1)),
+    write_offs_percent = colDef(name = "Writeoffs (%)",
+                                format = colFormat(percent = TRUE, digits = 1)),
+    endorsed_to_the_smart_campaign = colDef(name = "Endorsed to the Smart Campaign"),
+    ppi_users_k = colDef(name = "PPI Users (k)"),
+    social_rating = colDef(name = "Social Rating"),
+    social_rating_report_year = colDef(name = "Social Rating Report Year"),
+    unique_clients = colDef(name = "Unique Clients"),
+    banked_or_first_clients = colDef(name = "Banked of First Clients")
+  ),
+  defaultColDef = colDef(footerStyle = list(fontWeight = "bold"))
+)
+
+
+
+
+```
+
+## RECOMENDED GRAPHS FOR SOCIAL INDICATORS
+
+### GENERAL SOCIAL INDICATORS
+
+```{r}
+
+## Barras Drill Down Social
+
+temp <- base_sociales(params$year, param_mes)
+
+temp1 <- temp %>% group_by(country) %>% 
+  summarise(perc_avg_female = round(weighted.mean(female_clients_percent, number_of_clients)*100,2), # 
+            perc_avg_rural = round(weighted.mean(rural_clients_percent, number_of_clients)*100,2),
+            cantidad = sum(number_of_clients),
+            loan_portfolio = round(sum(loan_portfolio_usd_mm),2))
+
+temp2 <- temp %>% group_by(country, nombre_mfi) %>% 
+  summarise(perc_avg_female = round(weighted.mean(female_clients_percent, number_of_clients)*100,2),
+            perc_avg_rural = round(weighted.mean(rural_clients_percent, number_of_clients)*100,2),
+            cantidad = sum(number_of_clients),
+            loan_portfolio = round(sum(loan_portfolio_usd_mm),2)) %>% 
+  group_nest(country) %>% 
+  mutate(id = country,
+         type = "column",
+         data = map(data, mutate, name = nombre_mfi, y = loan_portfolio),
+         data = map(data, list_parse))
+
+
+tt <- tooltip_table(c("Loan Portfolio", "Num. of Clients", "Percentage Female Clients:", "Percentage Rural Clients:"),
+                    c("{point.loan_portfolio} (USD MM)", "{point.cantidad}", "{point.perc_avg_female} %", "{point.perc_avg_rural} %"))
+
+hchart(
+  temp1 %>% arrange(desc(loan_portfolio)),
+  "column",
+  hcaes(x = country, y = loan_portfolio, name = country, drilldown = country),
+  name = "Loan portfolio",
+  colorByPoint = TRUE
+) %>% 
+  hc_drilldown(
+    allowPointDrilldown = TRUE,
+    series = list_parse(temp2)
+  ) %>% 
+  hc_tooltip(
+    pointFormat = tt, # "{point.name} {point.pop}"
+    useHTML = TRUE,
+    valueDecimals = 0
+  ) %>% 
+  hc_yAxis(
+    title = list(text = "Loan Portfolio (USD MM)"),
+    # type = "logarithmic",
+    minorTickInterval = 'auto'
+  ) %>% 
+  hc_xAxis(
+    title = ""
+  ) %>% 
+  hc_colors(c("#00C607"
+  )) %>%
+  hc_subtitle(text = "Hover your mouse adn click on each country for more information", align = "center") %>% 
+  hc_add_theme(hc_theme_elementary()) %>%
+  hc_chart(style = list(fontFamily = "Open Sans"))
+
+```
+
+## FEMALE AND RURAL DISTRIBUTIONS {.tabset .tabset-fade .tabset-pills}
+
+### FEMALE PERCENTAGE
+
+```{r}
+
+
+temp <- base_sociales(params$year, param_mes)
+
+temp %<>% select(nombre_mfi, country, loan_portfolio_usd_mm, number_of_clients, female_clients_percent) %>% 
+  mutate(male_clients_percent = 1-female_clients_percent,
+         female_clients = female_clients_percent*number_of_clients,
+         male_clients  = -male_clients_percent*number_of_clients,
+         loan_portfolio_usd_mm = round(loan_portfolio_usd_mm,2)) %>% 
+  arrange(desc(loan_portfolio_usd_mm)) %>% 
+  rename(Female = female_clients, Male = male_clients) %>% 
+  gather(genero, clientes, - nombre_mfi, -country, -loan_portfolio_usd_mm, -number_of_clients, - female_clients_percent, -male_clients_percent ) %>% 
+  mutate(porcent = if_else(genero == "Female", female_clients_percent, male_clients_percent),
+         porcent = round(porcent*100))
+
+
+
+temp %>% 
+  hchart("bar", hcaes(as.factor(loan_portfolio_usd_mm), clientes, group = genero)) %>% 
+  hc_plotOptions(bar = list(
+    dataLabels = list(enabled = FALSE),
+    stacking = "normal",
+    enableMouseTracking = TRUE,
+    pointWidth = 10)
+  ) %>% 
+  hc_xAxis(
+    # categories = .$loan_portfolio_usd_mm,
+    reversed = FALSE,
+    labels=list(step= 1),
+    title= list(text= "Loan Portfolio (USD MM)")) %>% 
+  hc_yAxis(title= list(text= "Number of Clients"),
+           labels = list(formatter=JS("function () {
+               return Math.abs(this.value);
+             }"))) %>% 
+  hc_legend(reversed = T) %>% 
+  hc_tooltip(valueDecimals = 0, borderWidth = 0.01,
+             crosshairs = T, shared = FALSE, backgroundColor = "white",
+             style = list(fontFamily = "Open Sans",
+                          color = "black", fontSize = 13),
+             formatter = JS("function () {
+                   return '<b>' + 'Country: ' + '</b>' + this.point.country +'<br/>' +
+                   '<b>' + 'MFI: ' + '</b>' + this.point.nombre_mfi +'<br/>' +
+                   '<b>' + 'Loan Porfolio: ' + '</b>' + this.point.loan_portfolio_usd_mm + ' MM' +'<br/>' +
+                   '<b>' + 'Number of Clients: ' + '</b>' + this.point.number_of_clients + '<br/>' +
+                   '<b>' + this.series.name + ' clients' + '</b> ' + Highcharts.numberFormat(Math.abs(this.point.y), 1) + ' (' + this.point.porcent + '%)';}")) %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_colors(c("#00C607", "#999999")) %>% 
+  hc_size(height = 650)
+
+
+```
+
+### RURAL PERCENTAGE
+
+```{r}
+
+
+temp <- base_sociales(params$year, param_mes)
+
+temp  %<>% select(nombre_mfi, country, loan_portfolio_usd_mm, number_of_clients, rural_clients_percent)  %>% 
+  mutate(urban_clients_percent = 1-rural_clients_percent,
+         rural_clients = rural_clients_percent*number_of_clients,
+         urban_clients  = -urban_clients_percent*number_of_clients,
+         loan_portfolio_usd_mm = round(loan_portfolio_usd_mm,2)) %>% 
+  arrange(desc(loan_portfolio_usd_mm)) %>% 
+  rename(Rural = rural_clients, Urban = urban_clients) %>% 
+  gather(genero, clientes, - nombre_mfi, -country, -loan_portfolio_usd_mm, -number_of_clients, - rural_clients_percent, -urban_clients_percent ) %>% 
+  mutate(porcent = if_else(genero == "Rural", rural_clients_percent, urban_clients_percent),
+         porcent = round(porcent*100))
+
+
+
+temp %>% 
+  hchart("bar", hcaes(as.factor(loan_portfolio_usd_mm), clientes, group = genero)) %>% 
+  hc_plotOptions(bar = list(
+    dataLabels = list(enabled = FALSE),
+    stacking = "normal",
+    enableMouseTracking = TRUE,
+    pointWidth = 10)
+  ) %>% 
+  hc_xAxis(
+    # categories = .$loan_portfolio_usd_mm,
+    reversed = FALSE,
+    labels=list(step= 1),
+    title= list(text= "Loan Portfolio (USD MM)")) %>% 
+  hc_yAxis(title= list(text= "Number of Clients"),
+           labels = list(formatter=JS("function () {
+               return Math.abs(this.value);
+             }"))) %>% 
+  hc_legend(reversed = T) %>% 
+  hc_tooltip(valueDecimals = 0, borderWidth = 0.01,
+             crosshairs = T, shared = FALSE, backgroundColor = "white",
+             style = list(fontFamily = "Open Sans",
+                          color = "black", fontSize = 13),
+             formatter = JS("function () {
+                   return '<b>' + 'Country: ' + '</b>' + this.point.country +'<br/>' +
+                   '<b>' + 'MFI: ' + '</b>' + this.point.nombre_mfi +'<br/>' +
+                   '<b>' + 'Loan Porfolio: ' + '</b>' + this.point.loan_portfolio_usd_mm + ' MM' +'<br/>' +
+                   '<b>' + 'Number of Clients: ' + '</b>' + this.point.number_of_clients + '<br/>' +
+                   '<b>' + this.series.name + ' clients' + '</b> ' + Highcharts.numberFormat(Math.abs(this.point.y), 1) + ' (' + this.point.porcent + '%)';}")) %>% 
+  hc_chart(style = list(fontFamily = "Open Sans")) %>% 
+  hc_colors(c("#00C607", "#999999")) %>% 
+  hc_size(height = 650)
+
+```
+
+
+## DEVELOPMENTAL GOALS CHART
+
+```{r}
+
+temp <- base_sociales(params$year, param_mes) %>% 
+  mutate(female_clients_percent = ifelse(is.na(female_clients_percent), 0 ,female_clients_percent),
+         rural_clients_percent = ifelse(is.na(rural_clients_percent),0, rural_clients_percent),
+         size_clients = sqrt(number_of_clients)/4,
+         female_clients_percent = round(female_clients_percent*100,2),
+         rural_clients_percent = round(rural_clients_percent*100,2)) 
+
+colores <- c( "#152614", "#0a2e36", "#223542", "#166b60", "#1e441e", "#036d19", "#2a7221","#09a129", "#1dad5e", "#4dfe15",
+             "#119822","#31cb00", "#14cc60", "#27fb6b")
+
+temp %>% 
+  hchart("scatter",hcaes(female_clients_percent,
+                         rural_clients_percent,
+                         size = size_clients,
+                         group = country)) %>% 
+  hc_plotOptions(scatter= list(
+    dataLabels = list(enabled = FALSE),
+    enableMouseTracking = TRUE,
+    pointWidth = 2)) %>% 
+  hc_tooltip(enabled = T, valueDecimals = 0, borderWidth = 0.01,
+             pointFormat=paste("<br>MFI: <b>{point.mfis2}</b><br>
+                                Date of report: <b>{point.data_as_of}</b><br>
+                                Loan Portfolio: <b>{point.loan_portfolio_usd_mm}(USD MM)</b><br>
+                                Total Clients: <b>{point.number_of_clients}</b><br>
+                                Female Clients: <b>{point.female_clients_percent}%</b><br>
+                                Rural Clients: <b>{point.rural_clients_percent}%</b>"),
+             # headerFormat = "",
+             fontFamily = "Open Sans",
+             borderWidth = 0.8) %>% 
+  hc_yAxis(title = list(text = "% Rural Clients"),
+           plotLines = list(
+             list(
+               label = list(text = paste0("Percent median ", "(",median(temp$rural_clients_percent),"%)")),
+               color = "#FF0000",
+               width = 2,
+               value = median(temp$rural_clients_percent)
+             ),
+             list(
+               label = list(text = "Percent Goal (35%)"),
+               color = "#22bb33",
+               width = 2,
+               value = 35
+             )
+           )) %>% 
+  hc_xAxis(title = list(text = "% Female Clients"),
+           plotLines = list(
+             list(
+               label = list(text = paste0("Percent median","(",median(temp$female_clients_percent),"%)")),
+               color = "#FF0000",
+               width = 2,
+               value = median(temp$female_clients_percent)
+             ),
+             list(
+               label = list(text = "Percent Goal (50%)"),
+               color = "#22bb33",
+               width = 2,
+               value = 50
+             )
+           )) %>% 
+  hc_title(text = "Social Impact") %>% 
+  hc_colors(c(colores)) %>% 
+  # hc_colors(c(RColorBrewer::brewer.pal(n = 13, name = "Dark2"))) %>% 
+  # hc_add_theme(hc_theme_elementary()) %>%
+  hc_chart(style = list(fontFamily = "Open Sans"))
+
+
+```
+
+
+## POVERTY AND INCOME INDICATORS {.tabset .tabset-fade .tabset-pills}
+
+### LOCFUND II COUNTRY EXPOSURE
+
+### OTHER COUNTRIES
+
+## 
+
+a.  Rural clients as of December-19
+b.  PPI: Progress out of Poverty Index. As reported by the MFI to the PPI (<http://www.progressoutofpoverty.org/ppi-users>).\
+c.  In accordance to the document elaborated by MIF/IDB in Nov 2014 named "Financial Inclusion Latin America and the Caribbean", the microfinance average of loan in the region is USD 1.800.\
+d.  At Least 50% of Locfund II's clients will have an average loan size to final clients of less than 40% of GDP per capita.\
+e.  Principal + Interest as of December 2018.\
+f.  GDP: Gross domestic product per capita, GDP per capita, PPP (constant 2017 international \$), source: <https://data.worldbank.org/indicator/NY.GDP.PCAP.PP.KD> <https://www.imf.org/en/Publications/WEO/weo-database/2020/April/select-country-group>
+g.  HDI (Human Development Index). Source: 2019 Report, data compiled form official web site <http://hdr.undp.org/en/data#>
+h.  Population below national poverty line (NPL). Source: <https://www.cia.gov/library/publications/the-world-factbook/>\
+i.  Gini Coefficient: Measure of the deviation of the distribution of income among individuals or households within a country from a perfectly equal distribution. A value of 0 represents absolute equality, a value of 100 absolute inequality. Source: <https://data.worldbank.org/indicator/SI.POV.GINI> N/A Not Available. SPI4: Data as of June 2020. Source: <https://cerise-spm.org/wp-content/uploads/2020/07/Spi_organisations_FSP_22072020_for-site.xlsx> Data
+
+# FINANCIAL STATEMENT
+
+## BALANCE SHEET {.tabset .tabset-fade .tabset-pills}
+
+### ASSETS
+
+```{r}
+df_fs <-  df_base_horizontal(params$year)
+
+# Adjuntamos Meses vacios en caso de faltar
+nombres_meses <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+temp <- nombres_meses[!nombres_meses %in% colnames(df_fs)]
+df <- data.frame(matrix(ncol = length(temp), nrow = 1))
+colnames(df) <- temp
+df$tipo <- NA
+df_fs <- left_join(df_fs, df)
+
+
+df_fs_assets <- df_fs %>% filter(tipo == "ASSETS") %>% 
+    select(tipo, nivel1, nivel2, entidad, crudo, 
+         January, February, March, April, May, June, July, August, September, October, November, December)
+
+df_fs_assets$tipo <- "Total Assets"
+
+sticky_style <- list(position = "sticky", left = 0, background = "#fff", zIndex = 1,
+                     borderRight = "1px solid #eee")
+
+
+reactable(
+  df_fs_assets,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("tipo","nivel1","nivel2","entidad"),
+  columns = list(
+    tipo = colDef(name = "BALANCE SHEET",
+                  minWidth = 100),
+    nivel1 = colDef(name = "Main Group",
+                    minWidth = 100,
+                    style = sticky_style,
+                    headerStyle = sticky_style),
+    nivel2 = colDef(name = "Sub-Group",
+                    minWidth = 100),
+    entidad = colDef(name = "Name",
+                    minWidth = 100),
+    crudo = colDef(name = "Indicator",
+                    minWidth = 100),
+    January = colDef(name = "January",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    February = colDef(name = "February",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 100),
+    March = colDef(name = "March",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    April = colDef(name = "April",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    May = colDef(name = "May",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    June = colDef(name = "June",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    July = colDef(name = "July",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    August = colDef(name = "August",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    September = colDef(name = "September",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    October = colDef(name = "October",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    November = colDef(name = "November",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    December = colDef(name = "December",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100)
+  )
+  
+)
+
+```
+
+### LIABILITIES
+
+```{r}
+df_fs <-  df_base_horizontal(params$year)
+
+
+# Adjuntamos Meses vacios en caso de faltar
+nombres_meses <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+temp <- nombres_meses[!nombres_meses %in% colnames(df_fs)]
+df <- data.frame(matrix(ncol = length(temp), nrow = 1))
+colnames(df) <- temp
+df$tipo <- NA
+df_fs <- left_join(df_fs, df)
+
+
+df_fs_liab <-  df_fs %>% filter(tipo == "LIABILITIES") %>% 
+    select(tipo, nivel1, nivel2, entidad, crudo, 
+         January, February, March, April, May, June, July, August, September, October, November, December)
+
+df_fs_liab$tipo <- "Total Liabilities"
+
+sticky_style <- list(position = "sticky", left = 0, background = "#fff", zIndex = 1,
+                     borderRight = "1px solid #eee")
+
+reactable(
+  df_fs_liab,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("tipo","nivel1","nivel2","entidad"),
+  columns = list(
+    tipo = colDef(name = "BALANCE SHEET",
+                  minWidth = 100),
+    nivel1 = colDef(name = "Main Group",
+                    minWidth = 100,
+                    style = sticky_style,
+                    headerStyle = sticky_style),
+    nivel2 = colDef(name = "Sub-Group",
+                    minWidth = 100),
+    entidad = colDef(name = "Name",
+                    minWidth = 100),
+    crudo = colDef(name = "Indicator",
+                    minWidth = 100),
+    January = colDef(name = "January",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    February = colDef(name = "February",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 100),
+    March = colDef(name = "March",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    April = colDef(name = "April",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    May = colDef(name = "May",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    June = colDef(name = "June",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    July = colDef(name = "July",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    August = colDef(name = "August",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    September = colDef(name = "September",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    October = colDef(name = "October",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    November = colDef(name = "November",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    December = colDef(name = "December",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100)
+  )
+  
+)
+
+```
+
+### EQUITY
+
+```{r}
+df_fs <-  df_base_horizontal(params$year)
+
+# Adjuntamos Meses vacios en caso de faltar
+nombres_meses <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+temp <- nombres_meses[!nombres_meses %in% colnames(df_fs)]
+df <- data.frame(matrix(ncol = length(temp), nrow = 1))
+colnames(df) <- temp
+df$tipo <- NA
+df_fs <- left_join(df_fs, df)
+
+
+df_fs_equity <- df_fs %>% filter(tipo == "EQUITY") %>% 
+  select(tipo, nivel1, nivel2, entidad, crudo, 
+         January, February, March, April, May, June, July, August, September, October, November, December)
+
+df_fs_equity$tipo <- "Total Equity"
+
+sticky_style <- list(position = "sticky", left = 0, background = "#fff", zIndex = 1,
+                     borderRight = "1px solid #eee")
+
+reactable(
+  df_fs_equity,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("tipo","nivel1","nivel2","entidad"),
+  columns = list(
+    tipo = colDef(name = "BALANCE SHEET",
+                  minWidth = 100),
+    nivel1 = colDef(name = "Main Group",
+                    minWidth = 100,
+                    style = sticky_style,
+                    headerStyle = sticky_style),
+    nivel2 = colDef(name = "Sub-Group",
+                    minWidth = 100),
+    entidad = colDef(name = "Name",
+                    minWidth = 100),
+    crudo = colDef(name = "Indicator",
+                    minWidth = 100),
+    January = colDef(name = "January",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    February = colDef(name = "February",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 100),
+    March = colDef(name = "March",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    April = colDef(name = "April",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    May = colDef(name = "May",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    June = colDef(name = "June",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    July = colDef(name = "July",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    August = colDef(name = "August",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    September = colDef(name = "September",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    October = colDef(name = "October",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    November = colDef(name = "November",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    December = colDef(name = "December",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100)
+  )
+  
+)
+
+```
+
+### TOTAL
+
+```{r}
+
+df_total <- bind_rows(df_base %>% filter(gestion == params$year ,tipo %in% c("ASSETS", "EQUITY", "LIABILITIES")) %>% 
+        group_by(tipo, mes) %>% 
+        summarise(total = sum(valor, na.rm = TRUE)), # hasta este punto adjuntamos por tipo
+      df_base %>% filter(gestion == params$year ,tipo %in% c("EQUITY", "LIABILITIES")) %>% # a partir de aqui creamos LIAB + EQUITY
+        group_by(mes) %>% 
+        summarise(total = sum(valor, na.rm = TRUE)) %>% 
+        mutate(tipo = "LIABILITIES AND EQUITY")) %>% 
+  mutate(mes = case_when(mes == 1 ~ "January",
+                         mes == 2 ~ "February",
+                         mes == 3 ~ "March",
+                         mes == 4 ~ "April",
+                         mes == 5 ~ "May",
+                         mes == 6 ~ "June",
+                         mes == 7 ~ "July",
+                         mes == 8 ~ "August",
+                         mes == 9 ~ "September",
+                         mes == 10 ~ "October",
+                         mes == 11 ~ "November",
+                         mes == 12 ~ "December")) %>% 
+  spread(mes, total) %>%  
+  filter(tipo %in% c("ASSETS", "EQUITY", "LIABILITIES", "LIABILITIES AND EQUITY")) %>% 
+  select(tipo, 
+         January, February, March, April, May, June, July, August, September, October, November, December) %>% 
+  mutate(tipo = case_when(tipo == "ASSETS" ~ "Total Assets",
+                          tipo == "EQUITY" ~ "Total Equity",
+                          tipo == "LIABILITIES" ~ "Total Liabilities",
+                          tipo == "LIABILITIES AND EQUITY" ~ "Total Liabilities and Equity"))
+
+sticky_style <- list(position = "sticky", left = 0, background = "#fff", zIndex = 1,
+                     borderRight = "1px solid #eee")
+
+reactable(
+  df_total,
+  # filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  columns = list(
+    tipo = colDef(name = "BALANCE SHEET",
+                  minWidth = 100,
+                  style = sticky_style,
+                  headerStyle = sticky_style),
+    January = colDef(name = "January",
+                     format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                     minWidth = 100),
+    February = colDef(name = "February",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    March = colDef(name = "March",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    April = colDef(name = "April",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    May = colDef(name = "May",
+                 format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                 minWidth = 100),
+    June = colDef(name = "June",
+                  format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                  minWidth = 100),
+    July = colDef(name = "July",
+                  format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                  minWidth = 100),
+    August = colDef(name = "August",
+                    format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                    minWidth = 100),
+    September = colDef(name = "September",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 100),
+    October = colDef(name = "October",
+                     format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                     minWidth = 100),
+    November = colDef(name = "November",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    December = colDef(name = "December",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100)
+  )
+  
+)
+
+```
+
+## MONTHLY PROFIT/LOSS (USD) {.tabset .tabset-fade .tabset-pills}
+
+### GENERAL
+
+```{r}
+
+df_fs <-  df_base_horizontal(params$year)
+
+# Adjuntamos Meses vacios en caso de faltar
+nombres_meses <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+temp <- nombres_meses[!nombres_meses %in% colnames(df_fs)]
+df <- data.frame(matrix(ncol = length(temp), nrow = 1))
+colnames(df) <- temp
+df$tipo <- NA
+df_fs <- left_join(df_fs, df)
+
+
+
+df_results <- df_fs %>% filter(tipo == "PROFIT/(LOSS)") %>% 
+  select(nivel1, nivel2, entidad, crudo, 
+         January, February, March, April, May, June, July, August, September, October, November, December) %>% 
+  mutate(nivel1 = case_when(nivel1 == "INCOME" ~ "Total Income",
+                            nivel1 == "EXPENSES" ~ "Total Expenses",
+                            TRUE ~ nivel1))
+
+df_results <- df_results[order(match(df_results$nivel1, c("Total Income", "Total Expenses"))),]  
+
+
+sticky_style <- list(position = "sticky", left = 0, background = "#fff", zIndex = 1,
+                     borderRight = "1px solid #eee")
+
+
+reactable(
+  df_results,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("nivel1","nivel2","entidad"),
+  columns = list(
+    # tipo = colDef(name = "PROFIT/LOSS",
+    #               minWidth = 100),
+    nivel1 = colDef(name = "Main Group",
+                    minWidth = 100,
+                    style = sticky_style,
+                    headerStyle = sticky_style),
+    nivel2 = colDef(name = "Sub-Group",
+                    minWidth = 100),
+    entidad = colDef(name = "Name",
+                     minWidth = 100),
+    crudo = colDef(name = "Indicator",
+                   minWidth = 100),
+    January = colDef(name = "January",
+                     aggregate = "sum",
+                     format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                     minWidth = 100),
+    February = colDef(name = "February",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    March = colDef(name = "March",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    April = colDef(name = "April",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    May = colDef(name = "May",
+                 aggregate = "sum",
+                 format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                 minWidth = 100),
+    June = colDef(name = "June",
+                  aggregate = "sum",
+                  format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                  minWidth = 100),
+    July = colDef(name = "July",
+                  aggregate = "sum",
+                  format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                  minWidth = 100),
+    August = colDef(name = "August",
+                    aggregate = "sum",
+                    format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                    minWidth = 100),
+    September = colDef(name = "September",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 100),
+    October = colDef(name = "October",
+                     aggregate = "sum",
+                     format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                     minWidth = 100),
+    November = colDef(name = "November",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    December = colDef(name = "December",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100)
+  )
+  
+)
+
+```
+
+### TOTAL
+
+```{r}
+
+
+df_results_after <- bind_rows(df_base %>% filter(gestion == params$year) %>% 
+        filter(tipo %in% c("PROFIT/(LOSS)")) %>% 
+        filter(nivel1 %in% c("INCOME", "EXPENSES")) %>% 
+        group_by(nivel1, mes) %>% 
+        summarise(valor = sum(valor, na.rm = TRUE)) %>% 
+        rename(tipo = nivel1),
+      df_base %>% filter(gestion == params$year) %>% 
+        filter(tipo %in% c("PROFIT / LOSS before provisions", "PROFIT / LOSS after provisions",
+                           "PROFIT / LOSS after FX")) %>% 
+        select(-gestion,-nivel1, -nivel2, -entidad, -crudo)) %>%
+  mutate(mes = case_when(mes == 1 ~ "January",
+                         mes == 2 ~ "February",
+                         mes == 3 ~ "March",
+                         mes == 4 ~ "April",
+                         mes == 5 ~ "May",
+                         mes == 6 ~ "June",
+                         mes == 7 ~ "July",
+                         mes == 8 ~ "August",
+                         mes == 9 ~ "September",
+                         mes == 10 ~ "October",
+                         mes == 11 ~ "November",
+                         mes == 12 ~ "December")) %>% 
+  spread(mes, valor) %>% 
+  mutate(tipo = case_when(tipo == "INCOME" ~ "Total Income",
+                          tipo == "EXPENSES" ~ "Total Expenses",
+                          TRUE ~ tipo))
+  
+# Definimos orden de filas
+df_results_after <- df_results_after[order(match(df_results_after$tipo, c("Total Income", "Total Expenses", "PROFIT / LOSS before provisions", "PROFIT / LOSS after provisions",
+                                                                          "PROFIT / LOSS after FX"))),]  
+# Freeze first pane
+sticky_style <- list(position = "sticky", left = 0, background = "#fff", zIndex = 1,
+                     borderRight = "1px solid #eee")
+
+# Creamos tabla
+reactable(
+  df_results_after,
+  # filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  columns = list(
+    tipo = colDef(name = "PROFIT/LOSS",
+                  minWidth = 100,
+                  style = sticky_style,
+                  headerStyle = sticky_style),
+    January = colDef(name = "January",
+                     aggregate = "sum",
+                     format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                     minWidth = 100),
+    February = colDef(name = "February",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    March = colDef(name = "March",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    April = colDef(name = "April",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 100),
+    May = colDef(name = "May",
+                 aggregate = "sum",
+                 format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                 minWidth = 100),
+    June = colDef(name = "June",
+                  aggregate = "sum",
+                  format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                  minWidth = 100),
+    July = colDef(name = "July",
+                  aggregate = "sum",
+                  format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                  minWidth = 100),
+    August = colDef(name = "August",
+                    aggregate = "sum",
+                    format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                    minWidth = 100),
+    September = colDef(name = "September",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 100),
+    October = colDef(name = "October",
+                     aggregate = "sum",
+                     format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                     minWidth = 100),
+    November = colDef(name = "November",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100),
+    December = colDef(name = "December",
+                      aggregate = "sum",
+                      format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                      minWidth = 100)
+  )
+  
+)
+
+
+```
+
+## COUNTRY ANALYSIS
+
+```{r}
+
+
+# llamamos funcion para generar base Country Analisis
+df_imf <- country_analysis(params$year, param_mes)
+
+
+reactable(
+  df_imf,
+  filterable = TRUE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  # defaultPageSize = 15,
+  # resizable = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa",
+    highlightColor = "#f0f5f9",
+    cellPadding = "8px 12px",
+    style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif")
+  ),
+  groupBy = c("country", "entity_hom"),
+  columns = list(
+    country = colDef(name = "COUNTRY",
+                    minWidth = 75),
+    entity_hom = colDef(name = "ENTITY",
+                    minWidth = 75),
+    entidad = colDef(name = "OPERATIONS",
+                        minWidth = 75),
+    principal = colDef(name = "PRINCIPAL",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 75),
+    accrued_interest = colDef(name = "ACCRUED INTERESTS",
+                       aggregate = "sum",
+                       format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                       minWidth = 75),
+    total = colDef(name = "TOTAL",
+                   aggregate = "sum",
+                   format = colFormat(currency = "USD", separators = TRUE ,digits = 2),
+                   minWidth = 75)
+  )
+  
+)
+
+
+
+```
+
+
+
+<!-- # PDF VERSION -->
+
+<!-- To download a pdf version of the report click on the following button. -->
+
+
+
+
+```{r, include = F}
+
+rmarkdown::render("pdf_quarterly_report.Rmd", output_format = "pdf_document", params = list(
+  year = parms$year,
+  month = parms$month,
+  debt_commit = parms$debt_commit))
+
+
+
+```
+
+
+
+<!-- ```{r} -->
+
+<!-- download_file( -->
+<!--   path = system.file("pdf_quarterly_report.pdf", package = "downloadthis"), -->
+<!--   output_name = "PDF Quarterly Report", -->
+<!--   button_label = "Download pdf report", -->
+<!--   button_type = "danger", -->
+<!--   has_icon = TRUE, -->
+<!--   icon = "fa fa-save", -->
+<!--   self_contained = FALSE -->
+<!-- ) -->
+<!-- ``` -->
+

@@ -1,0 +1,9 @@
+{
+    "path" : "~/Documents/R/vaccines",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}
