@@ -238,7 +238,8 @@ temp %>%
   select(1:3, 5, 4, 6:7) %>% 
   mutate(
     date =  format(date, "%d de %B")  
-  ) -> temp
+  ) %>% 
+  filter(!is.na(nombre_espanol)) -> temp
 
 
 

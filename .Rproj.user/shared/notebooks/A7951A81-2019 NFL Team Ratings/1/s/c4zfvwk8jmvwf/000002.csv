@@ -1,9 +1,0 @@
-"0","### Get AFC conference table from pro-football-reference site
-AFC_table <- url %>%
-  xml2::read_html() %>%
-  html_nodes(xpath = '//*[@id=""AFC""]') %>%
-  html_table()
-"
-"2","Error in UseMethod(""read_xml"") : 
-  no applicable method for 'read_xml' applied to an object of class ""function""
-"

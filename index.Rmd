@@ -1,6 +1,5 @@
 ---
-title: 'Progreso de la vacunación'
-author: "Rafa López V"
+title: 'PROGRESO GLOBAL DE VACUNACIÓN'
 output: 
   html_document: 
     css: style.css
@@ -19,6 +18,10 @@ library(magrittr)
 
 source("code/limpieza.R")
 ```
+
+<br>
+
+El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando? [**En Avina**](https://www.avina.net/en/home/) estamos estamos trabajando para que la vacuna sea un bien público universal y esperamos que este espacio ayude a generar conciencia. Las grandes desigualdades nunca son son justas, pero mucho menos cuando hay vidas en juego.
 
 <br>
 ```{r echo = FALSE}
@@ -55,9 +58,9 @@ make_color_pal <- function(colors, bias = 1) {
 }
 
 off_rating_color <-
-  make_color_pal(c("#3ADCC6", "#f8fcf8", "#ef8a62"), bias = 1.3)
+  make_color_pal(c("#D5E9C1", "#FCD8DD", "#CCE1F4"), bias = 1.3)
 def_rating_color <-
-  make_color_pal(c("#3ADCC6", "#f8fcf8", "#ef8a62"), bias = 0.8)
+  make_color_pal(c("#D5E9C1", "#FCD8DD", "#CCE1F4"), bias = 0.8)
 
 rating_column <- function(maxWidth = 80, ...) {
   colDef(
@@ -70,9 +73,9 @@ rating_column <- function(maxWidth = 80, ...) {
 }
 
 off_rating_color1 <-
-  make_color_pal(rev(c("#3ADCC6", "#f8fcf8", "#ef8a62")), bias = 1.3)
+  make_color_pal(rev(c("#D5E9C1", "#FCD8DD", "#CCE1F4")), bias = 1.3)
 def_rating_color1 <-
-  make_color_pal(rev(c("#3ADCC6", "#f8fcf8", "#ef8a62")), bias = 0.8)
+  make_color_pal(rev(c("#D5E9C1", "#FCD8DD", "#CCE1F4")), bias = 0.8)
 
 rating_column1 <- function(maxWidth = 80, ...) {
   colDef(
@@ -117,14 +120,14 @@ reactable(
                            align = "center",
                            cell = function(values) {
     sparkline(values, type = "line", chartRangeMin = 0, height = "80%", width = "70%",
-              fillColor = "#F8F9FA", lineColor = "#073B4C", lineWidth = 3)
+              fillColor = "#E1E1E1", lineColor = "#073B4C", lineWidth = 3)
   }),
   fallecidos = colDef(class = "sparkys",
                       name = "Falllecidos",
                       align = "center",
                       cell = function(values) {
     sparkline(values, type = "line", chartRangeMin = 0, height = "75%", width = "60%",
-              fillColor = "#F8F9FA", lineColor = "#073B4C", lineWidth = 3)
+              fillColor = "#E1E1E1", lineColor = "#073B4C", lineWidth = 3)
   }),
       
     people_vaccinated_per_hundred = colDef(
@@ -136,8 +139,8 @@ reactable(
           width <- paste0(value, "%")
           bar_chart(value,
                     width = width,
-                    fill = "#E01F52",
-                    background = "#e1e1e1")
+                    fill = "#ED0973",
+                    background = "#E1E1E1")
         }
       ),
       
@@ -146,7 +149,7 @@ reactable(
                     class = "division-name cell",
                     ),
   tiempo_una_vacuna = rating_column(
-      name = "Semanas hasta concluir vacunación al al ritmo actual",
+      name = "Semanas hasta concluir vacunación al ritmo actual",
       cell = function(value) {
         normalized <-
             (value - min(temp$tiempo_una_vacuna)) / (max(temp$tiempo_una_vacuna) - min(temp$tiempo_una_vacuna))
@@ -183,17 +186,33 @@ reactable(
 
 <hr>
 
+Realizado por [Rafael López V.](https://rafalopezv.io/) y [Juan Cristóbal Birbuet](https://www.linkedin.com/in/juan-cristóbal-birbuet-rosazza-b563208/)
+
 Los datos se extraen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
 
-Los cálculos son personales
+<hr>
+Apuntes metodológicos
 
-Inspiración en:
+- La columna "Personas vacunadas la semana pasada [%]" calcula a semana como los 6 días anteriores a la fecha de la última medición"
+- La columna "Semanas hasta concluir a vacunación al rirtmo actual"  calcula al 100% de la población, incluyendo a aquella mayor a 16 años. 
+- Se excluyen:
+  - Países que no hayn mostrado ningún progreso en los últimos 7 días desde su último reporte
 
-- [Reactable](https://glin.github.io/reactable/)
+<hr>
+Menciones
+
+La tabla utilizó las siguientes fuentes como inspiración de trabajo.
+
 - [New York Times](https://www.nytimes.com/interactive/2021/01/25/world/europe/global-vaccination-population-rate.html)
-- [RStudio Table Contest](https://rpubs.com/kcuilla/nfl_team_ratings)
+- [Kyle Cuilla](https://rpubs.com/kcuilla/nfl_team_ratings)
+- [Reactable](https://glin.github.io/reactable/)
 
-<!-- [Código]() -->
+<hr>
+[Código](https://github.com/rafalopezv/vaccines)
+
+<!-- <center><img src = "input/logo_avina.png" width = "12%" height = "12%"></center> -->
+<br>
+
 
 
 

@@ -4,8 +4,6 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,300;1,400;1,600;1,700;1,800&display=swap');
 
-
-/* Row and column borders */
 .cell {
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.07);
 }
@@ -23,7 +21,6 @@
 }
 
 
-/* Column header hover formatting */
 .header:hover,
 .header[aria-sort="ascending"],
 .header[aria-sort="descending"] {
@@ -38,8 +35,6 @@
   color: #fff;
 }
 
-
-/* Column header formatting */
 .colheader {
   font-family: "Open Sans", sans-serif;
   font-size: 12px;
@@ -52,7 +47,6 @@
 }
 
 
-/* Number formatting */
 .number {
   font-family: "Fira Mono", Consolas, Monaco, monospace;
   font-size: 13px;
@@ -60,35 +54,11 @@
   white-space: pre;
 }
 
-/* Text formatting */
-.team-ratings {
-  font-family: Karla, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 12px;
-}
 
-
-/* Division column formatting */
 .division-name {
   font-family: Karla, "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 20;
   line-height: 30px;
-}
-
-
-/* Team column formatting */
-.team {
-  display: flex;
-  align-items: baseline;
-}
-
-.logo {
-  margin-right: 10px;
-  height: 24px;
-}
-
-.team-name {
-  font-size: 14px;
-  font-weight: 700;
 }
 
 .record {
@@ -98,51 +68,11 @@
 }
 
 
-/* Rotate SoS square into a diamond */
-.rotate{
-  transform: rotate(45deg);
-}
-
-
-/* Round corners under Team Rating columns */
-.roundcorners {
-  border-radius: 10px;
-  color: #000;
-  padding-bottom: 2px;
-  padding-right: 2px;
-  width: 80px;
-  height: 28px;
-}
-
-
-/* Formatting for title above table */
 .title {
   font-family: "Open Sans", sans-serif;
   font-size: 16px;
   margin: 16px 0;
-}
-
-
-/* SoS legend symbols underneath chart */
-.black-diamond-legend1{
-  transform: rotate(45deg);
-  color: #000;
-  margin-left: 7px;
-}
-
-.black-diamond-legend2{
-  transform: rotate(45deg);
-  color: #000;
-}
-
-.green-circle-legend{
-  color: #008000;
-  margin-left: 7px;
-}
-
-.blue-square-legend{
-  color: #0000FF;
-  margin-left: 7px;
+  text-align: center;
 }
 
 .roundcorners {
@@ -164,3 +94,11 @@ body {
     font-size: 15px;
 }
 
+
+a { 
+  color: #ED0973;
+}
+
+ a:hover {
+    color: #00578E; /* darker color when hovering */
+  }
