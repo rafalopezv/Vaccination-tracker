@@ -21,7 +21,9 @@ source("code/limpieza.R")
 
 <br>
 
-El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando? [**En Avina**](https://www.avina.net/en/home/) estamos estamos trabajando para que la vacuna sea un bien público universal y esperamos que este espacio ayude a generar conciencia. Las grandes desigualdades nunca son son justas, pero mucho menos cuando hay vidas en juego.
+El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando? [**En Avina**](https://www.avina.net/en/home/) estamos estamos trabajando para que la vacuna sea un bien público universal y esperamos que este espacio ayude a generar conciencia sobre ello. Las grandes desigualdades nunca son son justas, pero mucho menos cuando hay vidas en juego.
+
+La tabla es interactiva. Si se hace click sobre el título de las columnas, los registros de datos se ordenarán por orden alfabético o de mayor a menor (y viveversa), dependiendo si los datos son alfabéticos o numéricos.  
 
 <br>
 ```{r echo = FALSE}
@@ -188,23 +190,22 @@ reactable(
 
 Realizado por [Rafael López V.](https://rafalopezv.io/) y [Juan Cristóbal Birbuet](https://www.linkedin.com/in/juan-cristóbal-birbuet-rosazza-b563208/)
 
-Los datos se extraen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
+Los datos provienen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
 
 <hr>
 Apuntes metodológicos
 
-- La columna "Personas vacunadas la semana pasada [%]" calcula a semana como los 6 días anteriores a la fecha de la última medición"
-- La columna "Semanas hasta concluir a vacunación al rirtmo actual"  calcula al 100% de la población, incluyendo a aquella mayor a 16 años. 
+- Para el cálculo de las columnas: "Personas vacunadas [%]", "Personas vacunadas la semana pasada [%]" y "Semanas hasta concluir la vacunación al ritmo actual", se tomó en cuenta al 100% de la población de cada país. No obstante, es importante señalar que la aplicación de vacunas en menores de 18 años aún no fue aprobada y no está en ejecución. Se estima que el proceso de vacunación de los menores de edad se iniciará en 2022.
 - Se excluyen:
-  - Países que no hayn mostrado ningún progreso en los últimos 7 días desde su último reporte
+  - Países que no hayan iniciado la vacunación y que no hayan mostrado ningún progreso en los últimos 7 días desde su último reporte.
 
 <hr>
 Menciones
 
-La tabla utilizó las siguientes fuentes como inspiración de trabajo.
+El diseño de la tabla fue inspirado en las siguientes fuentes:
 
 - [New York Times](https://www.nytimes.com/interactive/2021/01/25/world/europe/global-vaccination-population-rate.html)
-- [Kyle Cuilla](https://rpubs.com/kcuilla/nfl_team_ratings)
+- [Kyle Cuilla](https://rafalopezv.github.io/vaccines/)
 - [Reactable](https://glin.github.io/reactable/)
 
 <hr>
