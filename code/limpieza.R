@@ -48,6 +48,8 @@ metricas %>%
 map_dfr(temp1, limpieza_una) -> temp1
 
 
+
+
 limpieza_dos <- function(.data) {
   .data %>% 
     select(-people_vaccinated_per_hundred) %>% 
@@ -242,5 +244,6 @@ temp %>%
   filter(!is.na(nombre_espanol)) -> temp
 
 
+temp %<>% filter(nombre_espanol != "Emiratos Árabes Unidos")
 
 
