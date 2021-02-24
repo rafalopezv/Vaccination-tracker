@@ -23,7 +23,7 @@ source("code/limpieza.R")
 
 El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando?  <span style="color: #ED0973;">**En Avina estamos trabajando para que la vacuna sea un bien público universal**</span> y esperamos que este espacio ayude a generar conciencia sobre ello. Las grandes desigualdades nunca son son justas, pero mucho menos cuando hay vidas en juego.
 
-La tabla es interactiva. Si se hace click sobre el título de las columnas, los registros de datos se ordenarán por orden alfabético o de mayor a menor</span> (y viveversa), dependiendo si los datos son alfabéticos o numéricos.  
+La tabla es interactiva. Cuando se hace click sobre el título de las columnas los registros se ordenan alfabéticamente si se trata de palabras, o de mayor a menor</span> (y viveversa) si se trata de números.  
 
 <br>
 ```{r echo = FALSE}
