@@ -1,5 +1,5 @@
 ---
-title: '<span style="color: #ED0973;">PROGRESO</span> GLOBAL DE VACUNACIÓN'
+title: 'COVID-19:<span style="color: #ED0973;">PROGRESO</span> GLOBAL DE VACUNACIÓN'
 output: 
   html_document: 
     css: style.css
@@ -21,7 +21,7 @@ source("code/limpieza.R")
 
 <br>
 
-El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando?  <span style="color: #ED0973;">**En Avina estamos estamos trabajando para que la vacuna sea un bien público universal**</span> y esperamos que este espacio ayude a generar conciencia sobre ello. Las grandes desigualdades nunca son son justas, pero mucho menos cuando hay vidas en juego.
+El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando?  <span style="color: #ED0973;">**En Avina estamos trabajando para que la vacuna sea un bien público universal**</span> y esperamos que este espacio ayude a generar conciencia sobre ello. Las grandes desigualdades nunca son son justas, pero mucho menos cuando hay vidas en juego.
 
 La tabla es interactiva. Si se hace click sobre el título de las columnas, los registros de datos se ordenarán por orden alfabético o de mayor a menor</span> (y viveversa), dependiendo si los datos son alfabéticos o numéricos.  
 
