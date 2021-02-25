@@ -25,6 +25,9 @@ El proceso de vacunación no ocurre de la misma manera en las diferentes regione
 
 La tabla es interactiva. Cuando se hace click sobre el título de las columnas los registros se ordenan alfabéticamente si se trata de palabras, o de mayor a menor</span> (y viveversa) si se trata de números.  
 
+Los datos provienen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
+
+Realizado por [Rafael López V.](https://rafalopezv.io/) y [Juan Cristóbal Birbuet](https://www.linkedin.com/in/juan-cristóbal-birbuet-rosazza-b563208/)
 <br>
 ```{r echo = FALSE}
 ### función para la barra de progreso
@@ -188,9 +191,6 @@ reactable(
 
 <hr>
 
-Realizado por [Rafael López V.](https://rafalopezv.io/) y [Juan Cristóbal Birbuet](https://www.linkedin.com/in/juan-cristóbal-birbuet-rosazza-b563208/)
-
-Los datos provienen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
 
 <hr>
 Apuntes metodológicos
