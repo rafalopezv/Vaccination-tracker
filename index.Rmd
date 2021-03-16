@@ -205,7 +205,7 @@ Menciones
 El diseño de la tabla fue inspirado en las siguientes fuentes:
 
 - [New York Times](https://www.nytimes.com/interactive/2021/01/25/world/europe/global-vaccination-population-rate.html)
-- [Kyle Cuilla](https://rafalopezv.github.io/vaccines/)
+- [Kyle Cuilla](https://community.rstudio.com/t/2019-nfl-team-ratings-table-contest-submission/81205)
 - [Reactable](https://glin.github.io/reactable/)
 
 <hr>
