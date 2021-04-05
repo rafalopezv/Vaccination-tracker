@@ -195,7 +195,8 @@ temp %>%
   mutate(
     date =  format(date, "%d de %B")  
   ) %>% 
-  filter(!is.na(nombre_espanol)) -> temp
+  filter(!is.na(nombre_espanol)) %>% 
+  filter(nombre_espanol != "Bhután") -> temp
 
 
 
