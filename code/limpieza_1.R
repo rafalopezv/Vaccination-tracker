@@ -10,6 +10,7 @@ library(janitor)
 # importar bases
 # ---------------------
 
+options(scipen = 999)
 
 metricas <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv")
 
