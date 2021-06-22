@@ -216,7 +216,6 @@ El diseño de la tabla fue inspirado en las siguientes fuentes:
 <hr>
 [Código](https://github.com/rafalopezv/vaccines)
 
-<!-- <center><img src = "input/logo_avina.png" width = "12%" height = "12%"></center> -->
 <br>
 
 
