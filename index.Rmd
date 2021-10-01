@@ -24,7 +24,7 @@ options(scipen = 999)
 
 El proceso de vacunación no ocurre de la misma manera en las diferentes regiones del mundo. ¿Por qué algunos países avanzan a gran velocidad y por qué algunos otros apenas están comenzando?  <span style="color: #ED0973;">**En Avina estamos trabajando para que la vacuna sea un bien público universal**</span> y esperamos que este espacio ayude a generar conciencia sobre ello. Las grandes desigualdades nunca son justas, pero mucho menos cuando hay vidas en juego.
 
-La tabla es interactiva. Cuando se hace click sobre el título de las columnas los registros se ordenan alfabéticamente si se trata de palabras, o de mayor a menor</span> (y viveversa) si se trata de números.  
+**La tabla es interactiva**. Cuando se hace click sobre el título de las columnas los registros se ordenan alfabéticamente si se trata de palabras, o de mayor a menor</span> (y viveversa) si se trata de números.  
 
 Los datos provienen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
 
@@ -63,36 +63,6 @@ make_color_pal <- function(colors, bias = 1) {
     rgb(get_color(x), maxColorValue = 255)
 }
 
-off_rating_color <-
-  make_color_pal(c("#D5E9C1", "#FCD8DD", "#CCE1F4"), bias = 1.3)
-def_rating_color <-
-  make_color_pal(c("#D5E9C1", "#FCD8DD", "#CCE1F4"), bias = 0.8)
-
-rating_column <- function(maxWidth = 80, ...) {
-  colDef(
-    maxWidth = maxWidth,
-    align = "center",
-    class = "cell number",
-    headerStyle = list(fontWeight = "500"),
-    ...
-  )
-}
-
-off_rating_color1 <-
-  make_color_pal(rev(c("#D5E9C1", "#FCD8DD", "#CCE1F4")), bias = 1.3)
-def_rating_color1 <-
-  make_color_pal(rev(c("#D5E9C1", "#FCD8DD", "#CCE1F4")), bias = 0.8)
-
-rating_column1 <- function(maxWidth = 80, ...) {
-  colDef(
-    maxWidth = maxWidth,
-    align = "center",
-    class = "cell number",
-    headerStyle = list(fontWeight = "500"),
-    ...
-  )
-}
-
 
 reactable(
     temp,
@@ -120,7 +90,7 @@ reactable(
       ),
       colGroup(
         name = "Desempeño de la vacunación",
-        columns = c("people_vaccinated_per_hundred", "ritmo_semanal_una", "tiempo_una_vacuna"),
+        columns = c("people_vaccinated_per_hundred", "people_fully_vaccinated_per_hundred", "total_boosters_per_hundred"),
         headerClass = "groupheader"
       )
     ),
@@ -142,7 +112,7 @@ reactable(
       
     people_vaccinated_per_hundred = colDef(
         class = "cell number border-left",
-        name = "Personas vacunadas [%]",
+        name = "Personas vacunadas con al menos una dosis [%]",
         align = "center",
         headerStyle = list(fontWeight = "400"),
         cell = function(value) {
@@ -153,39 +123,40 @@ reactable(
                     background = "#E1E1E1")
         }
       ),
+  
+    people_fully_vaccinated_per_hundred = colDef(
+        class = "cell number border-left",
+        name = "Personas vacunadas con las dosis completas [%]",
+        align = "center",
+        headerStyle = list(fontWeight = "400"),
+        cell = function(value) {
+          width <- paste0(value, "%")
+          bar_chart(value,
+                    width = width,
+                    fill = "#00bfc4",
+                    background = "#E1E1E1")
+        }
+      ),
       
+      total_boosters_per_hundred = colDef(
+        class = "cell number border-left",
+        name = "Personas vacunadas con dosis extras a las programadas incialmente [%]",
+        align = "center",
+        headerStyle = list(fontWeight = "400"),
+        cell = function(value) {
+          width <- paste0(value, "%")
+          bar_chart(value,
+                    width = width,
+                    fill = "#073B4C",
+                    background = "#E1E1E1")
+        }
+      ),
+  
       date = colDef(name = "Actualización de la información", align = "center", 
                     width = 120, 
                     class = "division-name cell",
                     ),
-  tiempo_una_vacuna = rating_column(
-      name = "Semanas hasta concluir vacunación al ritmo actual",
-      cell = function(value) {
-        normalized <-
-            (value - min(temp$tiempo_una_vacuna)) / (max(temp$tiempo_una_vacuna) - min(temp$tiempo_una_vacuna))
-            
-          
-        color <- off_rating_color(normalized)
-        value <- format(value, nsmall = 0, digits = 0)
-        div(class = "roundcorners",
-            style = list(background = color),
-            value)
-      }
-    ),
-  ritmo_semanal_una = rating_column1(
-      name = "Personas vacunadas la semana pasada [%]",
-      cell = function(value) {
-        normalized <-
-            (value - min(temp$ritmo_semanal_una)) / (max(temp$ritmo_semanal_una) - min(temp$ritmo_semanal_una))
-            
-          
-        color <- off_rating_color1(normalized)
-        value <- format(value, nsmall = 2, digits = 0)
-        div(class = "roundcorners",
-            style = list(background = rev(color)),
-            value)
-      }
-    ),
+  
   nombre_espanol = colDef(name = "País",
                           headerStyle = list(align = "center"),
                           class = "division-name cell")
@@ -195,14 +166,13 @@ reactable(
 ```
 
 <hr>
+Descripción de las variables
 
+- **Personas vacunadas con al menos una dosis [%]**: Número total de personas que recibieron al menos una dosis de alguna vacuna, por cada 100 personas de la población total del país.
 
-<hr>
-Apuntes metodológicos
+- **Personas vacunadas con las dosis completas [%]**: Número total de personas que recibieron todas las dosis prescritas en el protocolo de vacunación, por cada 100 personas de la población total del país. Si bien la mayoría de las vacunas requieren la aplicación de dos dosis, pero en algunos casos, se requiere sólo una dosis. 
 
-- Para el cálculo de las columnas: "Personas vacunadas [%]", "Personas vacunadas la semana pasada [%]" y "Semanas hasta concluir la vacunación al ritmo actual", se tomó en cuenta al 100% de la población de cada país. No obstante, es importante señalar que la aplicación de vacunas en menores de 18 años aún no fue aprobada y no está en ejecución. Se estima que el proceso de vacunación de los menores de edad se iniciará en 2022.
-- Se excluyen:
-  - Países que no hayan iniciado la vacunación y que no hayan mostrado ningún progreso en los últimos 7 días desde su último reporte.
+- **Personas vacunadas con dosis extras a las programadas inicialmente [%]**: Número total de dosis de refuerzo de la vacuna COVID-19, administradas por cada 100 personas de la población total del país. Se ha observado que después de algunos meses de haber recibido las dosis completas establecidas en el protocolo de vacunación, los anticuerpos generados decaen, por esta razón, en algunos países se ha autorizado el suministro de una dosis adicional de refuerzo. 
 
 <hr>
 Menciones
@@ -217,11 +187,3 @@ El diseño de la tabla fue inspirado en las siguientes fuentes:
 [Código](https://github.com/rafalopezv/vaccines)
 
 <br>
-
-
-
-
-
-
-
-
