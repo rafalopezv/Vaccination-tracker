@@ -177,7 +177,15 @@ temp %>%
 temp$nombre_espanol %<>% gsub("Reino Unido de Gran Bretaña e Irlanda del Norte", "Reino Unido", .)
 temp$nombre_espanol %<>% gsub("Estados Unidos de América", "Estados Unidos", .)
 temp$nombre_espanol %<>% gsub("Bolivia \\(Estado Plurinacional de\\)", "Bolivia", .)
-
+temp$nombre_espanol %<>% gsub("Venezuela \\(República Bolivariana de\\)", "Venezuela", .)
+temp$nombre_espanol %<>% gsub("República Democrática Popular Lao", "Laos", .)
+temp$nombre_espanol %<>% gsub("Irán \\(República Islámica del\\)", "Irán", .)
+temp$nombre_espanol %<>% gsub("República Unida de Tanzanía", "Tanzanía", .)
+temp$nombre_espanol %<>% gsub("Gambia \\(República de\\)", "Gambia", .)
+temp$nombre_espanol %<>% gsub("República Árabe Siria", "Siria", .)
+temp$nombre_espanol %<>% gsub("República de Moldova", "Moldova", .)
+temp$nombre_espanol %<>% gsub("Federación de Rusia", "Rusia", .)
+temp$nombre_espanol %<>% gsub("República de Corea", "Corea del Sur", .)
 
 Sys.setlocale(locale = "es_ES.UTF-8")
 
@@ -195,13 +203,3 @@ temp %>%
     )
   ) %>% 
   filter(!is.na(nombre_espanol)) -> temp
-
-
-
-
-
-
-
-
-
-
