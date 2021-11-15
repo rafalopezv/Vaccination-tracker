@@ -28,7 +28,9 @@ El proceso de vacunación no ocurre de la misma manera en las diferentes regione
 
 Los datos provienen de [Our World in Data](https://github.com/owid/covid-19-data/blob/master/public/data/README.md) y [Johns Hopkins](https://github.com/CSSEGISandData/COVID-19)
 
-<small>Realizado por [Rafael López V.](https://rafalopezv.io/) y [Juan Cristóbal Birbuet](https://www.linkedin.com/in/juan-cristóbal-birbuet-rosazza-b563208/)</small>
+
+
+Realizado por [Rafael López V.](https://rafalopezv.io/) y [Juan Cristóbal Birbuet](https://www.linkedin.com/in/juan-cristóbal-birbuet-rosazza-b563208/)
 <br>
 ```{r echo = FALSE}
 ### función para la barra de progreso
