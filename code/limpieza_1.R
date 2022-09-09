@@ -94,7 +94,7 @@ df %>%
 
 # añadir variable de número de semanas: extensión de un año 
 tibble(
-  semana = rep((1:120), 7)
+  semana = rep((1:500), 7)
 ) %>% 
   dplyr::arrange(semana) %>% 
   mutate(dias = 1:nrow(.)) -> temp1
@@ -111,7 +111,7 @@ df %>%
 
 
 tibble(
-  semana = rep((1:120), 7)
+  semana = rep((1:500), 7)
 ) %>% 
   dplyr::arrange(semana) %>% 
   mutate(dias = 1:nrow(.)) -> temp1
