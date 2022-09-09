@@ -22,7 +22,7 @@ metricas %>%
   select(location, iso_code, date, people_vaccinated_per_hundred, 
          people_fully_vaccinated_per_hundred, total_boosters_per_hundred) %>%
   group_split(location) %>% 
-  map(., ~arrange(., desc(., date))) %>% 
+  map(., ~dplyr::arrange(., desc(date))) %>% 
   bind_rows() -> metricas
 
 countrycode::codelist %>%
@@ -43,7 +43,7 @@ countrycode::codelist %>%
     ) 
   ) %>% 
   group_split(location) %>% 
-  map(., ~arrange(., desc(date)) %>% slice(1)) %>% 
+  map(., ~dplyr::arrange(., desc(date)) %>% slice(1)) %>% 
   bind_rows() -> temp
 
 
@@ -85,18 +85,18 @@ df %>%
   summarise_all(sum) %>% 
   ungroup() %>% 
   group_split(location, base) %>% 
-  map(., ~arrange(., fecha)) %>% 
+  map(., ~dplyr::arrange(., fecha)) %>% 
   map(., ~mutate(., dias = 1:nrow(.),
                  total_semanas = nrow(.)/7)) %>% 
   map(., ~mutate_if(., is.numeric, round, 0)) %>% 
   bind_rows() %>% 
-  arrange(base, location, fecha) -> df
+  dplyr::arrange(base, location, fecha) -> df
 
 # añadir variable de número de semanas: extensión de un año 
 tibble(
   semana = rep((1:120), 7)
 ) %>% 
-  arrange(semana) %>% 
+  dplyr::arrange(semana) %>% 
   mutate(dias = 1:nrow(.)) -> temp1
 
 df %<>% merge(., temp1, all.x = T)
@@ -113,7 +113,7 @@ df %>%
 tibble(
   semana = rep((1:120), 7)
 ) %>% 
-  arrange(semana) %>% 
+  dplyr::arrange(semana) %>% 
   mutate(dias = 1:nrow(.)) -> temp1
 
 mundo[[1]] %>% 
@@ -133,7 +133,7 @@ rm(mundo, m1, temp1)
 # calclulo de incidencia
 df %>% 
   group_split(base, location) %>% 
-  map(., ~arrange(., fecha)) %>% 
+  map(., ~dplyr::arrange(., fecha)) %>% 
   map(., ~mutate(., incidencia = lag(casos_acumulados),
                  incidencia = casos_acumulados - incidencia,
                  incidencia = abs(incidencia))) %>%
